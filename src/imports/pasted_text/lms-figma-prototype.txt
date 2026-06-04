@@ -1,0 +1,738 @@
+Act as a senior Product Designer, UI Engineer, and Figma expert with 20+ years of experience. Design a complete high-fidelity Figma prototype for a multi-tenant SaaS LMS platform named “Ascentia” / “Enterprise AI Learning SaaS”.
+
+The platform is built for schools, coaching institutes, and learning organizations. The main product flow must follow:
+
+Org Admin → Teacher → Students → Parents
+
+Design the product as a modern SaaS LMS with AI-powered learning, classroom management, assignments, analytics, student progress tracking, parent visibility, and institute-level control.
+
+The final Figma file should include:
+
+1. Web dashboard prototype
+2. Mobile app screens for student and parent
+3. Landing page
+4. Design system
+5. Clickable prototype flow
+6. Responsive layout guidance
+
+Brand Direction:
+Create a premium, clean, modern education SaaS interface. The UI should feel trustworthy, enterprise-ready, simple, and scalable. Use a white and blue theme with soft gradients, rounded cards, glassmorphism where appropriate, clean spacing, and modern dashboard layouts.
+
+Suggested visual style:
+
+* Primary color: Deep Blue / Royal Blue
+* Secondary: Sky Blue / Cyan
+* Background: White / Soft Blue / Light Gray
+* Accent: Green for success, Orange for warnings, Red for alerts
+* Typography: Inter, Manrope, or similar modern sans-serif
+* Components: Rounded cards, clean tables, soft shadows, progress charts, role-based navigation
+* Style inspiration: Linear, Stripe, Google Classroom, Duolingo dashboard, modern LMS SaaS platforms
+
+Core Product Concept:
+This is a SaaS LMS where an organization admin manages the entire institute. Teachers manage classes, lessons, assignments, student performance, and AI learning support. Students access courses, AI tutor, lessons, quizzes, tests, progress, and feedback. Parents view their child’s attendance, performance, assignments, fees, reports, and teacher updates.
+
+Important User Roles:
+
+1. Org Admin
+   The Org Admin controls the school/coaching institute account. They can manage teachers, students, parents, classes, subjects, batches, subscriptions, reports, announcements, branding, and overall platform usage.
+
+2. Teacher
+   Teachers manage assigned classes, subjects, lessons, homework, tests, attendance, student progress, AI-generated quizzes, doubt-solving reports, and parent communication.
+
+3. Student
+   Students access their dashboard, classes, lessons, AI tutor, assignments, quizzes, mock tests, learning progress, weak topics, badges, timetable, and teacher feedback.
+
+4. Parent
+   Parents monitor the child’s learning journey, attendance, performance, assignments, test scores, teacher remarks, fee status, announcements, and progress reports.
+
+Information Architecture:
+
+A. Public Landing Page
+Design a SaaS landing page with:
+
+* Hero section
+* Product headline: “AI-Powered LMS for Modern Schools & Coaching Institutes”
+* Subheadline explaining institute management, teacher workflow, student learning, and parent visibility
+* CTA buttons: “Book Demo” and “View Platform”
+* Feature cards:
+
+  * Org Management
+  * Teacher Dashboard
+  * Student AI Tutor
+  * Parent Progress App
+  * Assignments & Tests
+  * Attendance & Reports
+  * AI Quiz Generator
+  * Performance Analytics
+* Role-based section showing Org Admin, Teacher, Student, Parent
+* Dashboard preview mockup
+* Pricing preview
+* Testimonials
+* FAQ
+* Final CTA section
+
+B. Authentication Screens
+Design:
+
+* Login screen with role-aware login
+* Forgot password
+* Invite-based account activation
+* Organization code / institute code login
+* First-time password setup
+* Role selection after login if user has multiple roles
+
+C. Org Admin Web Dashboard
+
+Main navigation:
+
+* Dashboard
+* Organization
+* Teachers
+* Students
+* Parents
+* Classes & Batches
+* Subjects & Courses
+* Assignments
+* Tests & Quizzes
+* Attendance
+* Reports & Analytics
+* Announcements
+* Fees / Billing
+* AI Usage
+* Settings
+
+Org Admin Screens:
+
+1. Org Admin Dashboard
+   Show:
+
+* Total students
+* Active teachers
+* Active classes
+* Attendance summary
+* Assignment completion rate
+* Test performance
+* AI usage summary
+* Pending approvals
+* Recent activities
+* Quick actions: Add Teacher, Add Student, Create Class, Send Announcement
+
+2. Organization Setup
+   Show:
+
+* Institute profile
+* Logo upload
+* Brand colors
+* Academic year
+* Branches / campuses
+* Subscription status
+* Plan limits
+* Module access
+
+3. Teacher Management
+   Show:
+
+* Teacher list table
+* Search and filter
+* Add teacher modal
+* Assign teacher to class/subject
+* Teacher profile
+* Workload overview
+* Performance summary
+* Status: Active / Invited / Suspended
+
+4. Student Management
+   Show:
+
+* Student list
+* Add student
+* Bulk import students
+* Assign class/batch
+* Link parent
+* Student profile
+* Academic progress
+* Attendance
+* Assignment history
+* Test scores
+* AI tutor usage
+
+5. Parent Management
+   Show:
+
+* Parent list
+* Link parent to student
+* Parent contact details
+* Parent app access status
+* Communication history
+* Invite parent flow
+
+6. Classes & Batches
+   Show:
+
+* Class list
+* Batch list
+* Create class
+* Assign subjects
+* Assign teachers
+* Add students
+* Timetable preview
+* Batch performance dashboard
+
+7. Subjects & Courses
+   Show:
+
+* Course structure
+* Subject list
+* Chapters
+* Lessons
+* Learning materials
+* Upload PDFs/videos/notes
+* AI content indexing status
+* Publish/unpublish content
+
+8. Assignments
+   Show:
+
+* Assignment list
+* Create assignment
+* Assign to class/batch/student
+* Due date
+* Submission tracking
+* Auto-grade status
+* Teacher feedback
+
+9. Tests & Quizzes
+   Show:
+
+* Test list
+* Create quiz
+* AI-generate quiz button
+* Question bank
+* Mock test setup
+* Result analytics
+* Weak-topic mapping
+
+10. Attendance
+    Show:
+
+* Daily attendance
+* Class-wise attendance
+* Student attendance profile
+* Mark attendance screen
+* Monthly attendance report
+* Parent notification status
+
+11. Reports & Analytics
+    Show:
+
+* Organization-level analytics
+* Class performance
+* Teacher performance
+* Student progress
+* Attendance trends
+* Assignment completion
+* Test performance
+* AI learning insights
+* Download report button
+
+12. Announcements
+    Show:
+
+* Create announcement
+* Send to all / class / parent / teacher / student
+* Announcement history
+* Read status
+
+13. Fees / Billing
+    Show:
+
+* Student fee status
+* Pending fees
+* Paid fees
+* Invoice list
+* Parent payment visibility
+* Plan subscription billing for SaaS owner
+
+14. AI Usage
+    Show:
+
+* AI tutor sessions
+* AI quiz generations
+* AI doubt-solving usage
+* Token/credit usage
+* Usage by student/class/teacher
+* Limits and alerts
+
+15. Settings
+    Show:
+
+* Roles and permissions
+* Notification settings
+* Branding
+* Academic year
+* Security
+* Integrations
+* Data export
+
+D. Teacher Web Dashboard
+
+Teacher navigation:
+
+* Dashboard
+* My Classes
+* Students
+* Lessons
+* Assignments
+* Tests & Quizzes
+* Attendance
+* Doubts / AI Tutor Logs
+* Reports
+* Parent Communication
+
+Teacher Screens:
+
+1. Teacher Dashboard
+   Show:
+
+* Today’s classes
+* Pending assignments to review
+* Student doubts
+* Attendance pending
+* Test results
+* Weak students
+* Quick actions: Create Assignment, Mark Attendance, Create Quiz, Send Message
+
+2. My Classes
+   Show:
+
+* Assigned classes and batches
+* Subject cards
+* Class performance
+* Student count
+* Upcoming lessons
+
+3. Student List
+   Show:
+
+* Students assigned to teacher
+* Performance indicators
+* Attendance status
+* Assignment completion
+* Weak topics
+* View profile
+
+4. Lesson Management
+   Show:
+
+* Lesson list
+* Add lesson
+* Upload notes/video/PDF
+* Link chapter
+* Publish to class
+* AI lesson summary generation
+
+5. Assignment Creation
+   Show:
+
+* Assignment title
+* Description
+* Upload attachment
+* Choose class
+* Set due date
+* Marks
+* Rubric
+* Publish button
+
+6. Assignment Review
+   Show:
+
+* Submitted students
+* Pending students
+* Review answer
+* Add marks
+* Add feedback
+* Return to student
+
+7. Test / Quiz Builder
+   Show:
+
+* Manual question creation
+* AI quiz generation
+* Difficulty level
+* MCQ / short answer / descriptive
+* Assign test
+* Preview test
+
+8. Attendance Screen
+   Show:
+
+* Class roster
+* Present / Absent / Late status
+* Save attendance
+* Notify parent option
+
+9. AI Tutor Logs
+   Show:
+
+* Student doubts
+* AI answers generated
+* Topics where students struggle
+* Teacher intervention required
+* Flagged doubts
+
+10. Reports
+    Show:
+
+* Class performance
+* Student-wise progress
+* Assignment analytics
+* Test analytics
+* Weak topic heatmap
+
+11. Parent Communication
+    Show:
+
+* Parent messages
+* Send update
+* Student-specific remarks
+* Meeting request
+
+E. Student Mobile App + Web Dashboard
+
+Student navigation:
+
+* Home
+* My Courses
+* AI Tutor
+* Assignments
+* Tests
+* Progress
+* Timetable
+* Profile
+
+Student Screens:
+
+1. Student Home
+   Show:
+
+* Welcome message
+* Today’s classes
+* Pending assignments
+* Upcoming tests
+* Learning streak
+* Continue learning card
+* AI Tutor CTA
+* Progress summary
+
+2. My Courses
+   Show:
+
+* Subject cards
+* Chapter progress
+* Lesson completion
+* Continue button
+
+3. Lesson View
+   Show:
+
+* Video/PDF/notes area
+* Chapter summary
+* Key points
+* Mark complete
+* Ask AI Tutor button
+
+4. AI Tutor
+   Show:
+
+* Chat interface
+* Ask doubt
+* Upload image/PDF question
+* Voice input option
+* Suggested questions
+* AI explanation
+* Save doubt
+* Send to teacher option
+
+5. Assignments
+   Show:
+
+* Pending assignments
+* Submitted assignments
+* Due date
+* Marks
+* Submit answer/upload file
+
+6. Tests & Quizzes
+   Show:
+
+* Upcoming tests
+* Start quiz
+* Timer
+* Question screen
+* Submit test
+* Result screen
+* Explanation review
+
+7. Progress
+   Show:
+
+* Overall score
+* Attendance
+* Assignment completion
+* Test performance
+* Weak topics
+* Strong topics
+* Badges
+* Learning streak
+
+8. Timetable
+   Show:
+
+* Today’s schedule
+* Weekly schedule
+* Teacher name
+* Subject
+* Class time
+
+9. Student Profile
+   Show:
+
+* Personal details
+* Class/batch
+* Parent linked
+* Reports
+* Settings
+
+F. Parent Mobile App + Web Dashboard
+
+Parent navigation:
+
+* Home
+* Child Progress
+* Attendance
+* Assignments
+* Tests
+* Fees
+* Announcements
+* Messages
+
+Parent Screens:
+
+1. Parent Home
+   Show:
+
+* Child profile card
+* Today’s attendance
+* Latest test score
+* Pending assignments
+* Teacher remarks
+* Important announcements
+
+2. Child Progress
+   Show:
+
+* Subject-wise performance
+* Weekly progress
+* Weak topics
+* Strong topics
+* Learning time
+* AI tutor usage summary
+
+3. Attendance
+   Show:
+
+* Monthly attendance calendar
+* Present/Absent/Late status
+* Attendance percentage
+
+4. Assignments
+   Show:
+
+* Pending assignments
+* Submitted assignments
+* Marks
+* Teacher feedback
+
+5. Tests
+   Show:
+
+* Recent test results
+* Score breakdown
+* Class average comparison
+* Improvement suggestions
+
+6. Fees
+   Show:
+
+* Paid fees
+* Pending fees
+* Due date
+* Invoice download
+* Payment CTA placeholder
+
+7. Announcements
+   Show:
+
+* School announcements
+* Class announcements
+* Read/unread status
+
+8. Messages
+   Show:
+
+* Teacher messages
+* Send message
+* Meeting request
+
+Prototype Flow Requirements:
+
+Create clickable flows for:
+
+Flow 1: Org Admin Onboarding
+Login → Organization Dashboard → Add Teacher → Create Class → Add Students → Link Parents → Assign Teacher → Publish Course
+
+Flow 2: Teacher Daily Workflow
+Login → Teacher Dashboard → Select Class → Mark Attendance → Create Assignment → Review Student Submission → Send Parent Update
+
+Flow 3: Student Learning Workflow
+Login → Student Home → Open Course → Watch Lesson → Ask AI Tutor → Complete Quiz → View Progress
+
+Flow 4: Parent Monitoring Workflow
+Login → Parent Home → View Child Progress → Check Attendance → View Test Result → Read Teacher Remark → Message Teacher
+
+Flow 5: AI Learning Workflow
+Student asks doubt → AI Tutor responds → Doubt saved → Teacher sees AI Tutor Log → Teacher sends clarification → Parent sees progress update
+
+Design System Requirements:
+
+Create a design system page with:
+
+* Color palette
+* Typography scale
+* Buttons
+* Input fields
+* Dropdowns
+* Search bars
+* Cards
+* Tables
+* Badges
+* Status labels
+* Charts
+* Side navigation
+* Top navigation
+* Mobile bottom navigation
+* Modals
+* Empty states
+* Loading states
+* Success/error states
+* Notification components
+
+Dashboard Component Requirements:
+Use modern SaaS dashboard components:
+
+* KPI cards
+* Progress bars
+* Donut charts
+* Line charts
+* Bar charts
+* Heatmaps
+* Activity feed
+* Data tables
+* Filter chips
+* Searchable lists
+* Calendar component
+* Timeline component
+* Role cards
+* User profile cards
+
+UX Requirements:
+
+* Keep navigation simple and role-specific
+* Avoid overcrowding dashboards
+* Make the hierarchy clear: Org Admin controls everything, Teacher manages learning, Student learns, Parent monitors
+* Use consistent spacing
+* Use clear CTA buttons
+* Use status colors consistently
+* Create empty states for new organizations
+* Create onboarding guidance for first-time users
+* Make tables responsive
+* Use mobile-first design for Student and Parent apps
+* Use web-first design for Org Admin and Teacher dashboards
+
+Responsive Requirements:
+
+* Org Admin and Teacher: desktop dashboard first, tablet compatible
+* Student and Parent: mobile app first, also web compatible
+* Landing page: fully responsive desktop, tablet, mobile
+
+Key Screens to Generate in Figma:
+
+Landing Page:
+
+1. Hero
+2. Features
+3. Role-based platform
+4. Dashboard preview
+5. Pricing
+6. Demo CTA
+
+Auth:
+7. Login
+8. Forgot Password
+9. Invite Setup
+10. Role Selection
+
+Org Admin:
+11. Dashboard
+12. Organization Setup
+13. Teacher Management
+14. Add Teacher
+15. Student Management
+16. Add Student
+17. Parent Management
+18. Class & Batch Management
+19. Course Management
+20. Assignment Overview
+21. Test Overview
+22. Attendance
+23. Reports
+24. AI Usage
+25. Settings
+
+Teacher:
+26. Teacher Dashboard
+27. My Classes
+28. Student List
+29. Lesson Management
+30. Create Assignment
+31. Review Assignment
+32. Create Quiz
+33. Mark Attendance
+34. AI Tutor Logs
+35. Reports
+36. Parent Messages
+
+Student:
+37. Student Home
+38. My Courses
+39. Lesson View
+40. AI Tutor Chat
+41. Assignments
+42. Quiz Start
+43. Quiz Question
+44. Quiz Result
+45. Progress
+46. Timetable
+
+Parent:
+47. Parent Home
+48. Child Progress
+49. Attendance
+50. Assignments
+51. Test Results
+52. Fees
+53. Announcements
+54. Messages
+
+Output Expected:
+Generate high-fidelity, editable Figma screens with a polished SaaS LMS design. Use realistic dummy data, realistic charts, realistic role names, clean spacing, and professional UI copy. Ensure the prototype is clickable and demonstrates the complete product journey from organization setup to student learning and parent monitoring.
