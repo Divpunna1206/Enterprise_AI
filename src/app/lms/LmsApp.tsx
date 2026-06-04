@@ -11,7 +11,9 @@ import {
 } from 'react-router';
 import {
   Bell,
+  Bot,
   BookOpen,
+  Brain,
   Briefcase,
   Building2,
   CalendarCheck2,
@@ -25,6 +27,7 @@ import {
   FileBarChart2,
   FileCheck2,
   FileText,
+  Flame,
   GalleryVerticalEnd,
   GraduationCap,
   Home,
@@ -45,6 +48,14 @@ import {
   UserSquare2,
   Wallet,
 } from 'lucide-react';
+import { AiCitationCard } from '../components/ai/AiCitationCard';
+import { AiSafetyNote } from '../components/ai/AiSafetyNote';
+import { AiSettingsToggleCard } from '../components/ai/AiSettingsToggleCard';
+import { ParentAiSummaryCard } from '../components/ai/ParentAiSummaryCard';
+import { RewardBadgeCard } from '../components/ai/RewardBadgeCard';
+import { SourcePipeline } from '../components/ai/SourcePipeline';
+import { SourceStatusBadge } from '../components/ai/SourceStatusBadge';
+import { TeacherAiToolCard } from '../components/ai/TeacherAiToolCard';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
@@ -64,6 +75,22 @@ import {
   fullRouteList,
   roleScreens,
 } from './mockData';
+import {
+  aiConversations,
+  aiFeedbackRows,
+  aiQuizPreview,
+  aiSources,
+  aiTeacherTools,
+  motivationMessages,
+  parentAiSummaryCards,
+  recommendedActions,
+  rewardBadges,
+  rewardRules,
+  rewardSummary,
+  rewardTimeline,
+  sourcePipelineStages,
+  weakTopics,
+} from '../../data/aiMockData';
 
 type TableRowsByPath = Record<string, string[][]>;
 type CardsByPath = Record<string, DetailCard[]>;
@@ -103,6 +130,16 @@ const actionRouteMap: Record<string, string> = {
   'Create Homework': '/teacher/homework/create',
   'Create Quiz': '/teacher/quizzes/create',
   'Mark Attendance': '/teacher/attendance',
+  'AI Modules': '/super-admin/ai-modules',
+  'Generate Lesson Plan': '/teacher/ai-tools',
+  'Generate Quiz': '/teacher/ai-quiz-generator',
+  'AI Feedback': '/teacher/ai-feedback',
+  'Ask AI Tutor': '/student/ask-ai',
+  'AI Study Coach': '/student/ai-study-coach',
+  'Smart Practice': '/student/smart-practice',
+  Rewards: '/student/rewards',
+  'AI Progress Summary': '/parent/ai-progress',
+  'Rewards Summary': '/parent/rewards-summary',
 };
 
 const DemoAppContext = createContext<DemoAppContextValue | null>(null);
@@ -142,6 +179,17 @@ function readBool(formData: FormData, label: string) {
 
 function resolveActionRoute(label: string, currentPath?: string) {
   if (actionRouteMap[label]) return actionRouteMap[label];
+  if (label === 'AI Usage') {
+    if (currentPath?.startsWith('/school-admin')) return '/school-admin/ai-usage';
+    return '/super-admin/ai-usage';
+  }
+  if (label === 'AI Settings') {
+    return '/school-admin/ai-settings';
+  }
+  if (label === 'Source Library') {
+    if (currentPath?.startsWith('/teacher')) return '/teacher/source-library';
+    return '/school-admin/source-library';
+  }
   if (currentPath && currentPath.includes('/dashboard')) {
     const base = currentPath.replace(/\/dashboard$/, '');
     const normalized = normalizeKey(label);
@@ -283,6 +331,22 @@ function DemoAppProvider({ children }: { children: ReactNode }) {
 
   const submitForm = (screen: ScreenSpec, formData: FormData) => {
     const path = screen.path;
+
+    if (path === '/school-admin/source-library' || path === '/teacher/source-library') {
+      const schoolClass = readText(formData, 'Select Class', 'Class 8A');
+      const subject = readText(formData, 'Select Subject', 'Mathematics');
+      const chapter = readText(formData, 'Select Chapter', 'Fractions');
+      const title = `${subject} ${chapter} Upload`;
+      const uploadedBy = path.startsWith('/teacher') ? 'Teacher Upload' : 'School Admin';
+      const row = [title, 'PDF', schoolClass, subject, chapter, 'Uploaded', uploadedBy, 'Pending', '1.0 MB', 'View / Re-index / Use / Remove'];
+
+      setTableRowsByPath((current) => ({
+        ...current,
+        '/school-admin/source-library': [row, ...(current['/school-admin/source-library'] ?? [])],
+        '/teacher/source-library': [row, ...(current['/teacher/source-library'] ?? [])],
+      }));
+      return;
+    }
 
     if (path === '/super-admin/schools/create') {
       const schoolName = readText(formData, 'School name', 'New Demo School');
@@ -498,6 +562,21 @@ function DemoAppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (path === '/teacher/ai-quiz-generator') {
+      const title = `${readText(formData, 'Subject', 'Mathematics')} AI Quiz`;
+      const schoolClass = readText(formData, 'Class', 'Class 8A');
+      const subject = readText(formData, 'Subject', 'Mathematics');
+      const schedule = 'Generated in demo mode';
+      const marks = readText(formData, 'Marks', '20');
+
+      setTableRowsByPath((current) => ({
+        ...current,
+        '/school-admin/quizzes': [[title, schoolClass, subject, schedule, marks, 'Draft'], ...(current['/school-admin/quizzes'] ?? [])],
+        '/principal/quiz-reports': [[title, schoolClass, subject, schedule, marks, 'Draft'], ...(current['/principal/quiz-reports'] ?? [])],
+      }));
+      return;
+    }
+
     if (path === '/student/homework/detail') {
       setTableRowsByPath((current) => ({
         ...current,
@@ -596,11 +675,11 @@ function StatusBadge({ label }: { label: string }) {
   const variant =
     normalized.includes('active') || normalized.includes('paid') || normalized.includes('reviewed')
       ? 'success'
-      : normalized.includes('pending') || normalized.includes('expiring') || normalized.includes('late')
+      : normalized.includes('pending') || normalized.includes('expiring') || normalized.includes('late') || normalized.includes('chunk') || normalized.includes('extract') || normalized.includes('embed')
         ? 'warning'
-        : normalized.includes('overdue') || normalized.includes('inactive')
+        : normalized.includes('overdue') || normalized.includes('inactive') || normalized.includes('failed')
           ? 'destructive'
-          : normalized.includes('live') || normalized.includes('published')
+          : normalized.includes('live') || normalized.includes('published') || normalized.includes('uploaded')
             ? 'primary'
             : 'muted';
   return <Badge variant={variant}>{label}</Badge>;
@@ -758,8 +837,7 @@ function DataTable({ table }: { table: NonNullable<ScreenSpec['table']> }) {
             <TableRow key={`${row[0]}-${rowIndex}`}>
               {row.map((cell, cellIndex) => (
                 <TableCell key={`${cell}-${cellIndex}`}>
-                  {cellIndex === row.length - 1 &&
-                  ['Active', 'Inactive', 'Pending', 'Paid', 'Overdue', 'Live', 'Published', 'Reviewed', 'Draft', 'Expiring Soon', 'Completed', 'Submitted'].some((label) =>
+                  {['Active', 'Inactive', 'Pending', 'Paid', 'Overdue', 'Live', 'Published', 'Reviewed', 'Draft', 'Expiring Soon', 'Completed', 'Submitted', 'Uploaded', 'Extracting', 'Chunking', 'Embedding', 'Indexed', 'Failed', 'Scheduled', 'Viewed'].some((label) =>
                     cell.includes(label),
                   ) ? (
                     <StatusBadge label={cell} />
@@ -1086,8 +1164,440 @@ function InteractiveForm({
   );
 }
 
+function AiExperienceSection({ screen }: { screen: ScreenSpec }) {
+  const [settings, setSettings] = useState({
+    aiTutor: true,
+    teacherTools: true,
+    parentSummary: true,
+    smartPractice: true,
+    rewards: true,
+    citations: true,
+    restrictedSources: true,
+    followUps: true,
+    parentNotify: false,
+  });
+  const [selectedTool, setSelectedTool] = useState(aiTeacherTools[0].name);
+  const [messages, setMessages] = useState([
+    { role: 'assistant' as const, text: aiConversations[0].answer, meta: aiConversations[0] },
+  ]);
+  const [draftQuestion, setDraftQuestion] = useState('');
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
+  if (!screen.aiView) return null;
+
+  if (screen.aiView === 'source-library') {
+    return (
+      <div className="space-y-6">
+        <SectionCard
+          title="Indexing Pipeline"
+          description="Teacher or school admin uploads content, the AI layer processes it, and only approved indexed sources become usable."
+          aside={<SourceStatusBadge status="Indexed" />}
+        >
+          <SourcePipeline stages={sourcePipelineStages} activeStage="Indexed" />
+        </SectionCard>
+        <SectionCard title="Latest Source Jobs" description="Frontend-only preview of processing status across recently uploaded learning content.">
+          <div className="space-y-3">
+            {aiSources.slice(0, 4).map((source) => (
+              <div key={source.id} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
+                <div>
+                  <p className="font-medium text-slate-900">{source.title}</p>
+                  <p className="text-slate-500">{source.subject} | {source.chapter}</p>
+                </div>
+                <SourceStatusBadge status={source.status} />
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+        <AiSafetyNote
+          lines={[
+            'Only approved and indexed sources are used by Student AI Tutor.',
+            'Student AI access is controlled by school settings.',
+            'Sources and citations are shown for transparency.',
+          ]}
+        />
+      </div>
+    );
+  }
+
+  if (screen.aiView === 'school-ai-settings') {
+    const items = [
+      ['Enable AI Tutor for Students', 'Allow students to ask questions from school-approved sources only.', 'aiTutor'],
+      ['Enable Teacher AI Tools', 'Turn on lesson plan, homework, quiz, and rubric generation.', 'teacherTools'],
+      ['Enable Parent AI Summary', 'Show simple AI-written progress summaries to parents.', 'parentSummary'],
+      ['Enable Smart Practice', 'Allow weak-topic MCQ recommendations and practice loops.', 'smartPractice'],
+      ['Enable Rewards Engine', 'Award points, streaks, and badges for learning actions.', 'rewards'],
+      ['Show Citations in AI Answers', 'Always show source references and confidence for transparency.', 'citations'],
+      ['Restrict AI Answers to Uploaded Sources Only', 'Prevent answers outside approved indexed material.', 'restrictedSources'],
+      ['Allow Students to Ask Follow-up Questions', 'Enable follow-up conversation inside Ask AI Tutor.', 'followUps'],
+      ['Notify Parents About AI Progress', 'Share AI progress summary and motivation updates with parents.', 'parentNotify'],
+    ] as const;
+
+    return (
+      <div className="space-y-6">
+        <SectionCard title="AI Controls" description="Static local-state toggles for school AI access and safety settings.">
+          <div className="grid gap-4 lg:grid-cols-2">
+            {items.map(([label, description, key]) => (
+              <AiSettingsToggleCard
+                key={label}
+                label={label}
+                description={description}
+                checked={settings[key]}
+                onChange={(checked) => setSettings((current) => ({ ...current, [key]: checked }))}
+              />
+            ))}
+          </div>
+        </SectionCard>
+        <AiSafetyNote
+          lines={[
+            'AI answers are restricted to school-approved indexed sources.',
+            'Citations are shown for transparency.',
+            'Teachers can review content before assigning it to students.',
+          ]}
+        />
+      </div>
+    );
+  }
+
+  if (screen.aiView === 'student-ask-ai') {
+    const latestMeta = messages[messages.length - 1]?.meta ?? aiConversations[0];
+
+    return (
+      <div className="space-y-6">
+        <SectionCard title="Suggested Questions" description="Try one of these school-approved prompts to preview the AI tutor flow.">
+          <div className="flex flex-wrap gap-2">
+            {aiConversations.map((conversation) => (
+              <Button
+                key={conversation.question}
+                variant="outline"
+                onClick={() => {
+                  setDraftQuestion(conversation.question);
+                }}
+              >
+                {conversation.question}
+              </Button>
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard title="AI Tutor Chat" description="Frontend-only chat flow with static answers, citations, confidence, and next steps.">
+          <div className="mb-4 flex items-center gap-2 text-sm text-primary">
+            <Bot className="h-4 w-4" />
+            AI Learning Layer conversation
+          </div>
+          <div className="space-y-4">
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm ${
+                    message.role === 'user' ? 'bg-primary text-white' : 'bg-white border border-slate-200 text-slate-700'
+                  }`}
+                >
+                  {message.text}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 grid gap-4">
+            <div className="rounded-3xl border border-primary/15 bg-primary/5 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium text-slate-900">AI Confidence</p>
+                  <p className="text-sm text-slate-600">Confidence score for the current answer.</p>
+                </div>
+                <Badge variant="success">{latestMeta.confidence}%</Badge>
+              </div>
+            </div>
+            <div className="grid gap-3">
+              {latestMeta.citations.map((citation) => (
+                <AiCitationCard key={citation} citation={citation} />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {latestMeta.recommendations.map((item) => (
+                <Badge key={item} variant="secondary" className="rounded-full px-3 py-2">
+                  {item}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="mt-6 flex gap-3">
+            <input
+              value={draftQuestion}
+              onChange={(event) => setDraftQuestion(event.target.value)}
+              placeholder="Ask your question..."
+              className="h-11 flex-1 rounded-2xl border border-input bg-background px-4 text-sm outline-none"
+            />
+            <Button
+              onClick={() => {
+                const question = draftQuestion.trim();
+                if (!question) return;
+                const matched = aiConversations.find((conversation) =>
+                  normalizeKey(conversation.question).includes(normalizeKey(question)) ||
+                  normalizeKey(question).includes(normalizeKey(conversation.question)),
+                );
+                const response = matched ?? aiConversations[0];
+                setMessages((current) => [
+                  ...current,
+                  { role: 'user', text: question, meta: response },
+                  { role: 'assistant', text: response.answer, meta: response },
+                ]);
+                setDraftQuestion('');
+              }}
+            >
+              Send
+            </Button>
+          </div>
+        </SectionCard>
+        <AiSafetyNote
+          lines={[
+            'Answer generated from school-approved sources.',
+            'AI may make mistakes. Please verify with your teacher.',
+            'Sources and citations are shown for transparency.',
+          ]}
+        />
+      </div>
+    );
+  }
+
+  if (screen.aiView === 'student-ai-study-coach') {
+    return (
+      <div className="space-y-6">
+        <SectionCard title="Weak Topics" description="Topics the AI study coach wants the student to revisit this week.">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {weakTopics.map((topic) => (
+              <Card key={topic} className="rounded-3xl border-white/70 bg-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Brain className="h-5 w-5 text-warning" />
+                    <span className="font-medium text-slate-900">{topic}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard title="Recommended Learning Path" description="A simple AI-guided sequence based on the student’s current needs.">
+          <div className="space-y-3">
+            {recommendedActions.slice(0, 5).map((step, index) => (
+              <div key={step} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                  {index + 1}
+                </div>
+                {step}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  if (screen.aiView === 'student-smart-practice') {
+    const correctAnswer = 'C. 3/4';
+    return (
+      <div className="space-y-6">
+        <SectionCard title="Recommended Practice" description="Topic-based MCQ practice with instant feedback and points earned.">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Badge variant="primary" className="rounded-full px-4 py-2">Topic: Fractions</Badge>
+            <Badge variant="secondary" className="rounded-full px-4 py-2">Difficulty: Medium</Badge>
+          </div>
+          <Card className="mt-4 rounded-3xl border-white/70 bg-white">
+            <CardContent className="space-y-4 p-5">
+              <div>
+                <p className="text-sm text-slate-500">Question</p>
+                <p className="mt-1 font-medium text-slate-900">What is 1/2 + 1/4?</p>
+              </div>
+              <div className="grid gap-3">
+                {['A. 1/4', 'B. 2/4', 'C. 3/4', 'D. 4/4'].map((option) => (
+                  <Button key={option} variant={selectedAnswer === option ? 'primary' : 'outline'} onClick={() => setSelectedAnswer(option)}>
+                    {option}
+                  </Button>
+                ))}
+              </div>
+              {selectedAnswer ? (
+                <div className={`rounded-2xl px-4 py-3 text-sm ${selectedAnswer === correctAnswer ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                  {selectedAnswer === correctAnswer
+                    ? 'Correct! You earned 5 points.'
+                    : 'Not correct. Review the fraction addition rule and try again.'}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  if (screen.aiView === 'student-rewards') {
+    return (
+      <div className="space-y-6">
+        <SectionCard title="Badges Earned" description="Visible motivation and progress markers driven by activity and improvement.">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {rewardBadges.slice(0, 6).map((badge, index) => (
+              <RewardBadgeCard key={badge} badge={badge} earned={index < rewardSummary.badgesEarned} />
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard title="AI Motivation Card" description={motivationMessages[4]}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-sm text-slate-700">
+              <Flame className="h-5 w-5 text-warning" />
+              Next reward target: Complete 2 more videos to unlock {rewardSummary.nextBadge}.
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full w-[70%] rounded-full bg-gradient-to-r from-warning to-primary" />
+            </div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Reward Timeline" description="Recent actions that generated motivation points and streak progress.">
+          <div className="space-y-3">
+            {rewardTimeline.map((item) => (
+              <div key={item.title} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm">
+                <span className="text-slate-700">{item.title}</span>
+                <div className="flex items-center gap-3">
+                  <Badge variant="success">{item.points}</Badge>
+                  <span className="text-slate-500">{item.date}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard title="Reward Rules" description="How the rewards engine awards learning points in the frontend demo.">
+          <div className="grid gap-3 md:grid-cols-2">
+            {rewardRules.map((rule) => (
+              <div key={rule} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                {rule}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  if (screen.aiView === 'teacher-ai-tools') {
+    const activeTool = aiTeacherTools.find((tool) => tool.name === selectedTool) ?? aiTeacherTools[0];
+
+    return (
+      <div className="space-y-6">
+        <SectionCard title="AI Tool Modules" description="Choose one AI tool to preview the static generated teaching output.">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {aiTeacherTools.map((tool) => (
+              <TeacherAiToolCard
+                key={tool.name}
+                title={tool.name}
+                description={tool.description}
+                onSelect={() => setSelectedTool(tool.name)}
+              />
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard title={activeTool.outputTitle} description="Preview of the generated output panel for the selected AI tool.">
+          <div className="space-y-3">
+            {activeTool.outputLines.map((line) => (
+              <div key={line} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                {line}
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button variant="outline">Copy</Button>
+            <Button variant="outline">Download</Button>
+            <Button variant="outline">Save as Draft</Button>
+            <Button>Assign to Class</Button>
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  if (screen.aiView === 'teacher-ai-quiz-generator') {
+    return (
+      <SectionCard title="Generated Quiz Preview" description="Static AI-generated quiz preview from uploaded sources.">
+        <div className="space-y-3">
+          {aiQuizPreview.map((item) => (
+            <div key={item} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {item}
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Button variant="outline">Regenerate</Button>
+          <Button variant="outline">Edit Questions</Button>
+          <Button variant="outline">Save Draft</Button>
+          <Button>Publish Quiz</Button>
+        </div>
+      </SectionCard>
+    );
+  }
+
+  if (screen.aiView === 'teacher-ai-feedback') {
+    return (
+      <SectionCard title="AI Feedback Actions" description="Review AI observations, then edit or apply the suggested feedback.">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="rounded-3xl border-white/70 bg-white">
+            <CardContent className="p-4">
+              <p className="text-sm text-slate-500">Submissions reviewed</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">{aiFeedbackRows.length}</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-3xl border-white/70 bg-white">
+            <CardContent className="p-4">
+              <p className="text-sm text-slate-500">Common mistakes detected</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">3 patterns</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-3xl border-white/70 bg-white">
+            <CardContent className="p-4">
+              <p className="text-sm text-slate-500">Suggested revision topic</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">Fractions steps</p>
+            </CardContent>
+          </Card>
+        </div>
+      </SectionCard>
+    );
+  }
+
+  if (screen.aiView === 'parent-ai-progress') {
+    return (
+      <SectionCard title="Recent AI Insights" description="Explain progress simply so parents know what to encourage next.">
+        <div className="grid gap-4 md:grid-cols-2">
+          {parentAiSummaryCards.map((item) => (
+            <ParentAiSummaryCard key={item.title} title={item.title} description={item.description} />
+          ))}
+        </div>
+      </SectionCard>
+    );
+  }
+
+  if (screen.aiView === 'parent-rewards-summary') {
+    return (
+      <div className="space-y-6">
+        <SectionCard title="Motivation Summary" description={`Jitendra has earned ${rewardSummary.totalPoints} learning points, ${rewardSummary.badgesEarned} badges, and maintained a ${rewardSummary.currentStreak}-day streak.`}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {rewardBadges.slice(0, 4).map((badge) => (
+              <RewardBadgeCard key={badge} badge={badge} earned />
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard title="Reward Timeline" description="What recently improved your child’s rewards and motivation score.">
+          <div className="space-y-3">
+            {rewardTimeline.map((item) => (
+              <div key={item.title} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                {item.title} | {item.points} | {item.date}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function WorkspacePage({ screen }: { screen: ScreenSpec }) {
   const { cardsByPath, tableRowsByPath } = useDemoApp();
+  const { openAction } = useDemoApp();
   const resolvedScreen = useMemo(
     () => ({
       ...screen,
@@ -1135,6 +1645,8 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
         currentPath={resolvedScreen.path}
         hasForm={Boolean(resolvedScreen.form)}
       />
+
+      <AiExperienceSection screen={resolvedScreen} />
 
       {resolvedScreen.metrics && resolvedScreen.metrics.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1207,6 +1719,12 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
                     {card.value ? <Badge variant={toneBadgeVariant(card.tone)}>{card.value}</Badge> : null}
                   </div>
                 </CardHeader>
+                <CardContent className="pt-0">
+                  <Button variant="ghost" className="px-0 text-primary" onClick={() => openAction(card.title, resolvedScreen.path)}>
+                    Open
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </CardContent>
               </Card>
             ),
           )}
