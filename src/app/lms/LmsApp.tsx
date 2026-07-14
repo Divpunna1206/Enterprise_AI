@@ -43,9 +43,12 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  ShieldPlus,
   Sparkles,
   Users,
   UserSquare2,
+  Eye,
+  EyeOff,
   Wallet,
 } from 'lucide-react';
 import { AiCitationCard } from '../components/ai/AiCitationCard';
@@ -62,6 +65,73 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Input } from '../components/ui/Input';
 import { StatCard } from '../components/ui/StatCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { ProtectedRoute } from '../auth/ProtectedRoute';
+import { appRoleToPlatformRole, platformRoleToAppRole, roleRoutes } from '../auth/roleRoutes';
+import { useAuth } from '../hooks/useAuth';
+import { useDashboard } from '../hooks/useDashboard';
+import { AcceptInvitePage } from '../pages/onboarding/AcceptInvitePage';
+import { CreateSchoolPage } from '../pages/onboarding/CreateSchoolPage';
+import { RequestDemoPage } from '../pages/onboarding/RequestDemoPage';
+import {
+  SchoolAdminAcademicYearsPage,
+  SchoolAdminClassesSectionsPage,
+  SchoolAdminParentsPage,
+  SchoolAdminStudentsPage,
+  SchoolAdminSubjectsPage,
+  SchoolAdminTeachersPage,
+} from '../pages/school-admin/SchoolAdminCrudPages';
+import {
+  ParentHomeworkPage,
+  ParentQuizResultsPage,
+  SchoolAdminCoursesPage,
+  SchoolAdminHomeworkPage,
+  SchoolAdminQuizzesPage,
+  StudentCoursesPage,
+  StudentHomeworkPage,
+  StudentQuizAttemptPage,
+  StudentQuizPage,
+  StudentQuizResultPage,
+  TeacherCoursesPage,
+  TeacherHomeworkCreatePage,
+  TeacherHomeworkReviewPage,
+  TeacherQuizzesCreatePage,
+  TeacherVideoUploadPage,
+} from '../pages/lms/LmsCorePages';
+import {
+  AccountantFeeInvoicesPage,
+  AccountantPaymentsPage,
+  AccountantPendingFeesPage,
+  AccountantReceiptsPage,
+  AccountantRemindersPage,
+  AccountantReportsPageRoute,
+  ParentAiProgressPageRoute,
+  ParentAttendancePageRoute,
+  ParentFeesPageRoute,
+  ParentProfilePage,
+  PrincipalAttendanceReportsPage,
+  PrincipalHomeworkReportsPage,
+  PrincipalQuizReportsPage,
+  PrincipalStudentReportsPage,
+  PrincipalTeacherReportsPage,
+  SchoolAdminAiSettingsPage,
+  SchoolAdminAiUsagePage,
+  SchoolAdminAttendancePage,
+  SchoolAdminReportsPageRoute,
+  SchoolAdminSourceLibraryPage,
+  StudentAttendancePageRoute,
+  StudentProfilePage,
+  SuperAdminAiModulesPage,
+  SuperAdminAiUsagePage,
+  SuperAdminBillingPageRoute,
+  SuperAdminReportsPage,
+  SuperAdminSchoolsPage,
+  SuperAdminSubscriptionPlansPage,
+  TeacherAttendancePage,
+  TeacherProfilePage,
+  TeacherSourceLibraryPage,
+  TeacherStudentPerformancePageRoute,
+} from '../pages/runtime/OperationalApiPages';
+import { Toaster as Sonner } from 'sonner';
 import {
   ChartConfig,
   DetailCard,
@@ -95,29 +165,63 @@ import {
 type TableRowsByPath = Record<string, string[][]>;
 type CardsByPath = Record<string, DetailCard[]>;
 
-interface DemoSession {
-  isAuthenticated: boolean;
-  activeRole: Role | null;
-}
-
 interface DemoAppContextValue {
   cardsByPath: CardsByPath;
-  session: DemoSession;
   tableRowsByPath: TableRowsByPath;
   logout: () => void;
-  openAction: (label: string, currentPath?: string) => void;
-  setAuthenticated: (value: boolean) => void;
-  setRole: (role: Role) => void;
+  openAction: (label: string, currentPath?: string, actionPath?: string) => void;
   submitForm: (screen: ScreenSpec, formData: FormData) => void;
 }
 
-const DEMO_STORAGE_KEY = 'isparx-lms-demo-state-v1';
+const DEMO_STORAGE_KEY = 'isparx-lms-demo-state-v2';
+const isSuperAdminSignupEnabled =
+  (import.meta.env.VITE_SUPER_ADMIN_SIGNUP_ENABLED ?? 'false').toLowerCase() ===
+  'true';
+
+const passwordStrengthPattern =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,}$/;
+const phonePattern = /^\+?[1-9]\d{7,14}$/;
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function getPasswordRequirementStates(password: string) {
+  return [
+    {
+      label: 'At least 10 characters',
+      met: password.length >= 10,
+    },
+    {
+      label: 'One uppercase letter',
+      met: /[A-Z]/.test(password),
+    },
+    {
+      label: 'One lowercase letter',
+      met: /[a-z]/.test(password),
+    },
+    {
+      label: 'One number',
+      met: /\d/.test(password),
+    },
+    {
+      label: 'One special character',
+      met: /[^A-Za-z\d]/.test(password),
+    },
+  ];
+}
 
 const actionRouteMap: Record<string, string> = {
   'Create New School': '/super-admin/schools/create',
+  'Create School': '/super-admin/schools/create',
+  'View Schools': '/super-admin/schools',
+  Schools: '/super-admin/schools',
   'Add Subscription Plan': '/super-admin/subscription-plans',
+  'Subscription Plans': '/super-admin/subscription-plans',
   'View Billing': '/super-admin/billing',
+  Billing: '/super-admin/billing',
   'Export Report': '/super-admin/reports',
+  Reports: '/super-admin/reports',
   'Create Academic Year': '/school-admin/academic-years',
   'Add Teacher': '/school-admin/teachers',
   'Add Student': '/school-admin/students',
@@ -131,6 +235,7 @@ const actionRouteMap: Record<string, string> = {
   'Create Quiz': '/teacher/quizzes/create',
   'Mark Attendance': '/teacher/attendance',
   'AI Modules': '/super-admin/ai-modules',
+  Settings: '/super-admin/settings',
   'Generate Lesson Plan': '/teacher/ai-tools',
   'Generate Quiz': '/teacher/ai-quiz-generator',
   'AI Feedback': '/teacher/ai-feedback',
@@ -210,6 +315,43 @@ function useDemoApp() {
   return context;
 }
 
+function formatLabel(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function normalizeDashboardValue(value: unknown) {
+  if (value === null || value === undefined) return 'N/A';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return value.join(', ');
+  return JSON.stringify(value);
+}
+
+function getDashboardRoute(role: Role) {
+  return roleRoutes[appRoleToPlatformRole[role]];
+}
+
+function isDashboardRoute(path: string, role: Role) {
+  return path === getDashboardRoute(role);
+}
+
+function mapDashboardTable(rows: Array<Record<string, unknown>>) {
+  if (rows.length === 0) return undefined;
+
+  const keys = Object.keys(rows[0]);
+  return {
+    columns: keys.map(formatLabel),
+    rows: rows.map((row) => keys.map((key) => normalizeDashboardValue(row[key]))),
+  };
+}
+
+function describeDashboardAction(path: string) {
+  return `Open ${path.replace(/^\//, '').replace(/\//g, ' / ')}`;
+}
+
 const roleMeta: Record<
   Role,
   {
@@ -272,9 +414,9 @@ const roleMeta: Record<
 
 function DemoAppProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const { logout: authLogout } = useAuth();
   const [tableRowsByPath, setTableRowsByPath] = useState<TableRowsByPath>(() => makeDefaultTableRowsByPath());
   const [cardsByPath, setCardsByPath] = useState<CardsByPath>(() => makeDefaultCardsByPath());
-  const [session, setSession] = useState<DemoSession>({ isAuthenticated: false, activeRole: null });
 
   useEffect(() => {
     const raw = window.localStorage.getItem(DEMO_STORAGE_KEY);
@@ -283,7 +425,6 @@ function DemoAppProvider({ children }: { children: ReactNode }) {
     try {
       const parsed = JSON.parse(raw) as Partial<{
         cardsByPath: CardsByPath;
-        session: DemoSession;
         tableRowsByPath: TableRowsByPath;
       }>;
 
@@ -292,9 +433,6 @@ function DemoAppProvider({ children }: { children: ReactNode }) {
       }
       if (parsed.cardsByPath) {
         setCardsByPath({ ...makeDefaultCardsByPath(), ...parsed.cardsByPath });
-      }
-      if (parsed.session) {
-        setSession(parsed.session);
       }
     } catch {
       window.localStorage.removeItem(DEMO_STORAGE_KEY);
@@ -306,47 +444,23 @@ function DemoAppProvider({ children }: { children: ReactNode }) {
       DEMO_STORAGE_KEY,
       JSON.stringify({
         cardsByPath,
-        session,
         tableRowsByPath,
       }),
     );
-  }, [cardsByPath, session, tableRowsByPath]);
+  }, [cardsByPath, tableRowsByPath]);
 
   const logout = () => {
-    setSession({ isAuthenticated: false, activeRole: null });
-    navigate('/login');
+    void authLogout().finally(() => {
+      navigate('/login');
+    });
   };
 
-  const setAuthenticated = (value: boolean) => {
-    setSession((current) => ({ ...current, isAuthenticated: value }));
-  };
-
-  const setRole = (role: Role) => {
-    setSession({ isAuthenticated: true, activeRole: role });
-  };
-
-  const openAction = (label: string, currentPath?: string) => {
-    navigate(resolveActionRoute(label, currentPath));
+  const openAction = (label: string, currentPath?: string, actionPath?: string) => {
+    navigate(actionPath ?? resolveActionRoute(label, currentPath));
   };
 
   const submitForm = (screen: ScreenSpec, formData: FormData) => {
     const path = screen.path;
-
-    if (path === '/school-admin/source-library' || path === '/teacher/source-library') {
-      const schoolClass = readText(formData, 'Select Class', 'Class 8A');
-      const subject = readText(formData, 'Select Subject', 'Mathematics');
-      const chapter = readText(formData, 'Select Chapter', 'Fractions');
-      const title = `${subject} ${chapter} Upload`;
-      const uploadedBy = path.startsWith('/teacher') ? 'Teacher Upload' : 'School Admin';
-      const row = [title, 'PDF', schoolClass, subject, chapter, 'Uploaded', uploadedBy, 'Pending', '1.0 MB', 'View / Re-index / Use / Remove'];
-
-      setTableRowsByPath((current) => ({
-        ...current,
-        '/school-admin/source-library': [row, ...(current['/school-admin/source-library'] ?? [])],
-        '/teacher/source-library': [row, ...(current['/teacher/source-library'] ?? [])],
-      }));
-      return;
-    }
 
     if (path === '/super-admin/schools/create') {
       const schoolName = readText(formData, 'School name', 'New Demo School');
@@ -607,12 +721,9 @@ function DemoAppProvider({ children }: { children: ReactNode }) {
 
   const value: DemoAppContextValue = {
     cardsByPath,
-    session,
     tableRowsByPath,
     logout,
     openAction,
-    setAuthenticated,
-    setRole,
     submitForm,
   };
 
@@ -655,12 +766,12 @@ function toneBadgeVariant(tone?: DetailCard['tone']) {
 function BrandMark() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+      <div className="flex h-12 w-12 -rotate-6 items-center justify-center rounded-[16px] border-[3px] border-border bg-primary text-primary-foreground shadow-[6px_6px_0_0_var(--color-border)]">
         <GraduationCap className="h-6 w-6" />
       </div>
       <div>
-        <p className="text-lg font-semibold text-foreground">{brand.name}</p>
-        <p className="text-xs text-muted-foreground">White-label SaaS school platform</p>
+        <p className="text-lg font-extrabold tracking-[-0.04em] text-foreground">{brand.name}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-hover">Enterprise AI School Platform</p>
       </div>
     </div>
   );
@@ -703,18 +814,18 @@ function PageHeader({
   const { openAction } = useDemoApp();
 
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-      <div className="space-y-2">
+    <div className="page-header">
+      <div className="page-title space-y-2">
         <RoleBadge role={role} />
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
+          <h1 className="text-4xl font-extrabold tracking-[-0.05em] text-foreground md:text-5xl">{title}</h1>
           <p className="max-w-3xl text-sm text-muted-foreground md:text-base">{description}</p>
         </div>
       </div>
       {actions && actions.length > 0 ? (
         <div className="flex flex-wrap gap-3">
           {actions.slice(0, 2).map((action) => (
-            <Button key={action.label} variant="outline" onClick={() => openAction(action.label, currentPath)}>
+            <Button key={action.label} variant="outline" onClick={() => openAction(action.label, currentPath, action.path)}>
               {action.label}
             </Button>
           ))}
@@ -758,11 +869,11 @@ function SectionCard({
   aside?: ReactNode;
 }) {
   return (
-    <Card id={id} className="overflow-hidden rounded-3xl border-white/60 bg-white/90 shadow-sm shadow-slate-200/60 backdrop-blur">
-      <CardHeader className="border-b border-slate-100/80 bg-slate-50/70">
+    <Card id={id} className="overflow-hidden bg-white">
+      <CardHeader className="border-b-[3px] border-border bg-accent/60">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <CardTitle className="text-lg">{title}</CardTitle>
+            <CardTitle className="text-xl">{title}</CardTitle>
             {description ? <CardDescription className="mt-1">{description}</CardDescription> : null}
           </div>
           {aside}
@@ -777,21 +888,23 @@ function QuickActionCard({
   label,
   description,
   currentPath,
+  path,
 }: {
   label: string;
   description: string;
   currentPath?: string;
+  path?: string;
 }) {
   const { openAction } = useDemoApp();
 
   return (
-    <Card className="rounded-3xl border-primary/10 bg-gradient-to-br from-primary/5 to-white transition-transform hover:-translate-y-0.5">
+    <Card className="bg-white transition-transform hover:-translate-y-1">
       <CardHeader>
         <CardTitle className="text-base">{label}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <Button variant="ghost" className="px-0 text-primary" onClick={() => openAction(label, currentPath)}>
+        <Button variant="outline" className="text-primary" onClick={() => openAction(label, currentPath, path)}>
           Open action
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -804,15 +917,15 @@ function SearchFilterBar({ filters }: { filters: string[] }) {
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div className="relative w-full md:max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-muted-foreground" />
         <input
-          className="h-10 w-full rounded-2xl border border-input bg-background pl-9 pr-3 text-sm outline-none ring-0"
+          className="h-12 w-full rounded-[18px] border-[2px] border-input bg-background pl-11 pr-4 text-sm font-medium shadow-[4px_4px_0_0_var(--color-border)] outline-none"
           placeholder="Search records"
         />
       </div>
       <div className="flex flex-wrap gap-2">
         {filters.map((filter) => (
-          <Badge key={filter} variant="muted" className="rounded-full px-3 py-1.5">
+          <Badge key={filter} variant="muted" className="px-3 py-1.5">
             {filter}
           </Badge>
         ))}
@@ -1164,6 +1277,12 @@ function InteractiveForm({
   );
 }
 
+type AiChatMessage = {
+  role: 'assistant' | 'user';
+  text: string;
+  meta: (typeof aiConversations)[number];
+};
+
 function AiExperienceSection({ screen }: { screen: ScreenSpec }) {
   const [settings, setSettings] = useState({
     aiTutor: true,
@@ -1178,7 +1297,7 @@ function AiExperienceSection({ screen }: { screen: ScreenSpec }) {
   });
   const [selectedTool, setSelectedTool] = useState(aiTeacherTools[0].name);
   const [messages, setMessages] = useState([
-    { role: 'assistant' as const, text: aiConversations[0].answer, meta: aiConversations[0] },
+    { role: 'assistant' , text: aiConversations[0].answer, meta: aiConversations[0] },
   ]);
   const [draftQuestion, setDraftQuestion] = useState('');
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -1595,28 +1714,138 @@ function AiExperienceSection({ screen }: { screen: ScreenSpec }) {
   return null;
 }
 
+function DashboardLoadingState() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index} className="rounded-3xl border-white/70 bg-white shadow-sm">
+            <CardContent className="space-y-3 p-6">
+              <div className="h-4 w-28 animate-pulse rounded bg-slate-200" />
+              <div className="h-8 w-24 animate-pulse rounded bg-slate-200" />
+              <div className="h-3 w-32 animate-pulse rounded bg-slate-200" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <SectionCard title="Loading dashboard" description="Fetching live dashboard data from the backend.">
+        <div className="grid gap-3 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+          ))}
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+function DashboardErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <SectionCard title="Dashboard unavailable" description="The dashboard API returned an error.">
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {message}
+        </div>
+        <Button onClick={onRetry}>Retry</Button>
+      </div>
+    </SectionCard>
+  );
+}
+
+function useResolvedDashboardScreen(screen: ScreenSpec) {
+  const isDashboardScreen = isDashboardRoute(screen.path, screen.role);
+  const { data, error, loading, refetch } = useDashboard(appRoleToPlatformRole[screen.role], isDashboardScreen);
+
+  if (!isDashboardScreen) {
+    return {
+      dashboardError: null,
+      dashboardLoading: false,
+      isDashboardScreen: false,
+      refetchDashboard: refetch,
+      screen,
+    };
+  }
+
+  const firstTable = data?.tables[0];
+  const mappedTable = firstTable ? mapDashboardTable(firstTable.rows) : undefined;
+
+  return {
+    dashboardError: error,
+    dashboardLoading: loading,
+    isDashboardScreen: true,
+    refetchDashboard: refetch,
+    screen: {
+      ...screen,
+      heroTitle: undefined,
+      heroSubtitle: undefined,
+      metrics: data?.metrics.length
+        ? data.metrics.map((metric) => ({
+          label: metric.label,
+          value: normalizeDashboardValue(metric.value),
+          tone: 'primary',
+        }))
+        : undefined,
+      quickActions: data?.quickActions.length
+        ? data.quickActions.map((action) => ({
+          label: action.label,
+          description: describeDashboardAction(action.path),
+          path: action.path,
+        }))
+        : undefined,
+      cards: undefined,
+      chart: undefined,
+      secondaryChart: undefined,
+      table: mappedTable,
+      timeline: data?.recentActivities.length
+        ? data.recentActivities.map((activity) => ({
+          title: activity.title,
+          description: formatLabel(activity.type),
+          time: activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'Recently',
+        }))
+        : undefined,
+      checklist: undefined,
+      filters: undefined,
+      tabs: undefined,
+      form: undefined,
+      aiView: undefined,
+      emptyState: 'No live dashboard data is available yet.',
+    } satisfies ScreenSpec,
+  };
+}
+
 function WorkspacePage({ screen }: { screen: ScreenSpec }) {
   const { cardsByPath, tableRowsByPath } = useDemoApp();
   const { openAction } = useDemoApp();
+  const {
+    dashboardError,
+    dashboardLoading,
+    isDashboardScreen,
+    refetchDashboard,
+    screen: dashboardScreen,
+  } = useResolvedDashboardScreen(screen);
   const resolvedScreen = useMemo(
-    () => ({
-      ...screen,
-      cards: cardsByPath[screen.path] ?? screen.cards,
-      table: screen.table
-        ? {
-            ...screen.table,
-            rows: tableRowsByPath[screen.path] ?? screen.table.rows,
-          }
-        : undefined,
-    }),
-    [cardsByPath, screen, tableRowsByPath],
+    () =>
+      isDashboardScreen
+        ? dashboardScreen
+        : {
+            ...dashboardScreen,
+            cards: cardsByPath[dashboardScreen.path] ?? dashboardScreen.cards,
+            table: dashboardScreen.table
+              ? {
+                  ...dashboardScreen.table,
+                  rows: tableRowsByPath[dashboardScreen.path] ?? dashboardScreen.table.rows,
+                }
+              : undefined,
+          },
+    [cardsByPath, dashboardScreen, isDashboardScreen, tableRowsByPath],
   );
 
   const hasCharts = Boolean(resolvedScreen.chart || resolvedScreen.secondaryChart);
   const showAttendanceCalendar =
-    resolvedScreen.path.includes('/attendance') ||
-    resolvedScreen.path === '/student/home' ||
-    resolvedScreen.path === '/parent/home';
+    !isDashboardScreen &&
+    (resolvedScreen.path.includes('/attendance') ||
+      resolvedScreen.path === '/student/home' ||
+      resolvedScreen.path === '/parent/home');
 
   return (
     <div className="space-y-6">
@@ -1648,14 +1877,19 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
 
       <AiExperienceSection screen={resolvedScreen} />
 
-      {resolvedScreen.metrics && resolvedScreen.metrics.length > 0 ? (
+      {isDashboardScreen && dashboardLoading ? <DashboardLoadingState /> : null}
+      {isDashboardScreen && dashboardError ? (
+        <DashboardErrorState message={dashboardError.message} onRetry={refetchDashboard} />
+      ) : null}
+
+      {!dashboardLoading && !dashboardError && resolvedScreen.metrics && resolvedScreen.metrics.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {resolvedScreen.metrics.map((metric) => (
             <StatCard
               key={metric.label}
               title={metric.label}
               value={metric.value}
-              change={metric.change}
+              change={'change' in metric ? metric.change : undefined}
               changeType={
                 metric.tone === 'destructive'
                   ? 'negative'
@@ -1678,11 +1912,17 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
         </div>
       ) : null}
 
-      {resolvedScreen.quickActions && resolvedScreen.quickActions.length > 0 ? (
+      {!dashboardLoading && !dashboardError && resolvedScreen.quickActions && resolvedScreen.quickActions.length > 0 ? (
         <SectionCard title="Quick Actions" description="Common actions that explain how this role moves through the system.">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {resolvedScreen.quickActions.map((action) => (
-              <QuickActionCard key={action.label} label={action.label} description={action.description} currentPath={resolvedScreen.path} />
+              <QuickActionCard
+                key={action.label}
+                label={action.label}
+                description={action.description}
+                currentPath={resolvedScreen.path}
+                path={action.path}
+              />
             ))}
           </div>
         </SectionCard>
@@ -1703,7 +1943,7 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
         </SectionCard>
       ) : null}
 
-      {resolvedScreen.cards && resolvedScreen.cards.length > 0 ? (
+      {!dashboardLoading && !dashboardError && resolvedScreen.cards && resolvedScreen.cards.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {resolvedScreen.cards.map((card) =>
             card.tag ? (
@@ -1731,14 +1971,14 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
         </div>
       ) : null}
 
-      {hasCharts ? (
+      {!dashboardLoading && !dashboardError && hasCharts ? (
         <div className="grid gap-6 xl:grid-cols-2">
           {resolvedScreen.chart ? <ReportChartCard chart={resolvedScreen.chart} /> : null}
           {resolvedScreen.secondaryChart ? <ReportChartCard chart={resolvedScreen.secondaryChart} /> : null}
         </div>
       ) : null}
 
-      {showAttendanceCalendar ? (
+      {!dashboardLoading && !dashboardError && showAttendanceCalendar ? (
         <SectionCard
           title="Attendance Calendar"
           description="Reusable attendance state for student, parent, teacher, and admin views."
@@ -1748,13 +1988,13 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
         </SectionCard>
       ) : null}
 
-      {resolvedScreen.filters && resolvedScreen.filters.length > 0 ? (
+      {!dashboardLoading && !dashboardError && resolvedScreen.filters && resolvedScreen.filters.length > 0 ? (
         <SectionCard title="Filters" description="Static filter controls ready for API wiring later.">
           <SearchFilterBar filters={resolvedScreen.filters} />
         </SectionCard>
       ) : null}
 
-      {resolvedScreen.table ? (
+      {!dashboardLoading && !dashboardError && resolvedScreen.table ? (
         <SectionCard title="Data View" description="Realistic placeholder data with role-specific actions and statuses.">
           <DataTable table={resolvedScreen.table} />
         </SectionCard>
@@ -1772,9 +2012,9 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
         </SectionCard>
       ) : null}
 
-      {resolvedScreen.form ? <InteractiveForm screen={resolvedScreen} /> : null}
+      {!dashboardLoading && !dashboardError && resolvedScreen.form ? <InteractiveForm screen={resolvedScreen} /> : null}
 
-      {resolvedScreen.timeline && resolvedScreen.timeline.length > 0 ? (
+      {!dashboardLoading && !dashboardError && resolvedScreen.timeline && resolvedScreen.timeline.length > 0 ? (
         <SectionCard title="Recent Activity" description="Recent updates, signals, and next steps for this role.">
           <div className="space-y-4">
             {resolvedScreen.timeline.map((item) => (
@@ -1793,7 +2033,16 @@ function WorkspacePage({ screen }: { screen: ScreenSpec }) {
         </SectionCard>
       ) : null}
 
-      {!resolvedScreen.table && !resolvedScreen.cards && !resolvedScreen.metrics && !resolvedScreen.form && !resolvedScreen.chart ? (
+      {!dashboardLoading &&
+      !dashboardError &&
+      !resolvedScreen.table &&
+      !resolvedScreen.cards &&
+      !resolvedScreen.metrics &&
+      !resolvedScreen.form &&
+      !resolvedScreen.chart &&
+      !resolvedScreen.quickActions &&
+      !resolvedScreen.timeline &&
+      !resolvedScreen.checklist ? (
         <EmptyState title="No content configured yet." description={resolvedScreen.emptyState ?? 'This route is ready for backend data later.'} />
       ) : null}
     </div>
@@ -1816,13 +2065,13 @@ function DesktopRoleLayout({ role }: { role: Role }) {
   const meta = roleMeta[role];
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(10,77,255,0.12),_transparent_28%),linear-gradient(180deg,#f7faff_0%,#f2f6ff_100%)]">
+    <div className="dashboard-shell app-grid">
       <div className="mx-auto flex min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:px-6">
-        <aside className="hidden w-72 shrink-0 rounded-[32px] border border-white/70 bg-white/90 p-5 shadow-sm shadow-slate-200/60 backdrop-blur lg:flex lg:flex-col">
+        <aside className="hidden w-72 shrink-0 rounded-[32px] border-[3px] border-border bg-white p-5 shadow-[10px_10px_0_0_var(--color-border)] lg:flex lg:flex-col">
           <BrandMark />
-          <div className="mt-6 rounded-3xl bg-slate-50 p-4">
-            <p className="text-sm font-medium text-foreground">{meta.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{meta.schoolName ?? meta.topbarNote}</p>
+          <div className="mt-6 rounded-[24px] border-[3px] border-border bg-accent px-4 py-4">
+            <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-foreground">{meta.label}</p>
+            <p className="mt-2 text-sm font-medium text-muted-foreground">{meta.schoolName ?? meta.topbarNote}</p>
           </div>
           <nav className="mt-6 flex-1 space-y-1">
             {screens.map((screen) => {
@@ -1832,10 +2081,10 @@ function DesktopRoleLayout({ role }: { role: Role }) {
                 <Link
                   key={screen.path}
                   to={screen.path}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
+                  className={`flex items-center gap-3 rounded-[20px] border-[2px] px-4 py-3 text-sm font-bold transition ${
                     active
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/15'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-foreground'
+                      ? 'border-border bg-primary text-primary-foreground shadow-[5px_5px_0_0_var(--color-border)]'
+                      : 'border-transparent text-foreground hover:border-border hover:bg-accent hover:shadow-[5px_5px_0_0_var(--color-border)]'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -1844,34 +2093,34 @@ function DesktopRoleLayout({ role }: { role: Role }) {
               );
             })}
           </nav>
-          <Button variant="ghost" className="justify-start" onClick={logout}>
+          <Button variant="outline" className="justify-start" onClick={logout}>
             <LogOut className="h-4 w-4" />
             Logout
           </Button>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <header className="sticky top-4 z-20 rounded-[28px] border border-white/70 bg-white/90 p-4 shadow-sm shadow-slate-200/60 backdrop-blur">
+          <header className="sticky top-4 z-20 rounded-[28px] border-[3px] border-border bg-white p-4 shadow-[8px_8px_0_0_var(--color-border)]">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">{meta.schoolName ?? meta.label}</p>
-                <p className="text-sm text-muted-foreground">{current?.title ?? meta.topbarNote}</p>
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-primary-hover">{meta.schoolName ?? meta.label}</p>
+                <p className="text-base font-bold text-foreground">{current?.title ?? meta.topbarNote}</p>
               </div>
               <div className="flex flex-col gap-3 md:flex-row md:items-center">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-muted-foreground" />
                   <input
-                    className="h-10 w-full min-w-56 rounded-2xl border border-input bg-background pl-9 pr-3 text-sm outline-none"
+                    className="h-12 w-full min-w-56 rounded-[18px] border-[2px] border-input bg-background pl-11 pr-4 text-sm font-medium shadow-[4px_4px_0_0_var(--color-border)] outline-none"
                     placeholder="Search dashboards, reports, or records"
                   />
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="relative rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
-                    <Bell className="h-5 w-5 text-slate-700" />
-                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
+                  <div className="relative rounded-[18px] border-[2px] border-border bg-warning p-2.5 shadow-[4px_4px_0_0_var(--color-border)]">
+                    <Bell className="h-5 w-5 text-foreground" />
+                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-border bg-white px-1 text-[10px] font-semibold text-foreground">
                       4
                     </span>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+                  <div className="rounded-full border-[2px] border-border bg-accent px-4 py-2 text-sm font-bold text-foreground shadow-[4px_4px_0_0_var(--color-border)]">
                     {meta.label}
                   </div>
                 </div>
@@ -1894,31 +2143,31 @@ function MobileRoleLayout({ role }: { role: Role }) {
   const current = roleScreens[role].find((screen) => location.pathname === screen.path);
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#eef4ff_0%,#f7faff_42%,#ffffff_100%)] pb-24">
+    <div className="dashboard-shell app-grid pb-24">
       <div className="mx-auto flex min-h-screen max-w-md flex-col">
-        <header className="sticky top-0 z-20 border-b border-white/70 bg-white/90 px-4 py-4 backdrop-blur">
+        <header className="sticky top-0 z-20 border-b-[3px] border-border bg-white px-4 py-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-primary">{roleMeta[role].label}</p>
-              <h1 className="mt-1 text-lg font-semibold text-foreground">{current?.title ?? roleMeta[role].label}</h1>
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-primary-hover">{roleMeta[role].label}</p>
+              <h1 className="mt-1 text-xl font-extrabold tracking-[-0.04em] text-foreground">{current?.title ?? roleMeta[role].label}</h1>
               <p className="text-sm text-muted-foreground">{roleMeta[role].schoolName}</p>
             </div>
-            <div className="relative rounded-2xl bg-slate-50 p-2.5">
-              <Bell className="h-5 w-5 text-slate-700" />
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
+            <div className="relative rounded-[18px] border-[2px] border-border bg-warning p-2.5 shadow-[4px_4px_0_0_var(--color-border)]">
+              <Bell className="h-5 w-5 text-foreground" />
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-border bg-white px-1 text-[10px] font-semibold text-foreground">
                 5
               </span>
             </div>
           </div>
-          <Button variant="ghost" className="mt-3 justify-start px-0 text-sm text-slate-600" onClick={logout}>
+          <Button variant="outline" className="mt-3 justify-start text-sm" onClick={logout}>
             <LogOut className="h-4 w-4" />
             Logout
           </Button>
         </header>
-        <main className="flex-1 px-4 py-4">
+        <main className="dashboard-main flex-1 px-4 py-4">
           <Outlet />
         </main>
-        <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/70 bg-white/95 px-3 py-3 backdrop-blur">
+        <nav className="fixed bottom-0 left-0 right-0 z-30 border-t-[3px] border-border bg-white px-3 py-3">
           <div className="mx-auto grid max-w-md grid-cols-5 gap-2">
             {items.map((screen) => {
               const Icon = iconForPath(screen.path);
@@ -1927,8 +2176,8 @@ function MobileRoleLayout({ role }: { role: Role }) {
                 <Link
                   key={screen.path}
                   to={screen.path}
-                  className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-center text-[11px] ${
-                    active ? 'bg-primary/10 text-primary' : 'text-slate-500'
+                  className={`flex flex-col items-center gap-1 rounded-[18px] border-[2px] px-2 py-2 text-center text-[11px] font-bold ${
+                    active ? 'border-border bg-primary text-primary-foreground shadow-[4px_4px_0_0_var(--color-border)]' : 'border-transparent text-muted-foreground'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -1947,182 +2196,531 @@ function RoleLayout({ role }: { role: Role }) {
   return roleMeta[role].mobile ? <MobileRoleLayout role={role} /> : <DesktopRoleLayout role={role} />;
 }
 
-function RequireDemoAuth({ children }: { children: ReactNode }) {
-  const { session } = useDemoApp();
-
-  if (!session.isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-}
-
 function LandingPage() {
   const navigate = useNavigate();
 
-  const platformFlow = [
-    'iSparx creates school',
-    'School Admin sets up academics',
-    'Teachers manage learning',
-    'Students learn and submit work',
-    'Parents track progress',
-    'School gets reports',
+  const trustCards = [
+    {
+      title: 'Role-Based LMS',
+      description: 'Separate workspaces keep platform owners, schools, staff, learners, and families focused on the right tasks.',
+      icon: ShieldCheck,
+      tone: 'warning' as const,
+    },
+    {
+      title: 'AI-Ready Workflows',
+      description: 'Academic operations and classroom support are designed to grow into source-based, review-aware AI features.',
+      icon: Brain,
+      tone: 'primary' as const,
+    },
+    {
+      title: 'Backend-Connected Foundation',
+      description: 'The product direction is aligned to protected routes, API workflows, school setup, and real SaaS operations.',
+      icon: Layers3,
+      tone: 'secondary' as const,
+    },
   ];
 
-  const features = [
-    'Multi-school SaaS',
-    'Role-based dashboards',
-    'Homework and quiz management',
-    'Attendance tracking',
-    'Parent app',
-    'Fee tracking',
+  const roleCards = [
+    {
+      title: 'Super Admin',
+      description: 'Manages schools, subscriptions, platform settings, onboarding flows, and overall SaaS governance.',
+      icon: ShieldPlus,
+    },
+    {
+      title: 'School Admin',
+      description: 'Owns academic setup, teachers, students, parents, classes, sections, and daily school operations.',
+      icon: Building2,
+    },
+    {
+      title: 'Principal',
+      description: 'Monitors academic performance, attendance health, teacher activity, and school-wide reporting.',
+      icon: School,
+    },
+    {
+      title: 'Teacher',
+      description: 'Creates courses, manages homework, quizzes, video lessons, classroom attendance, and feedback loops.',
+      icon: NotebookPen,
+    },
+    {
+      title: 'Student',
+      description: 'Learns from courses, submits work, attempts quizzes, tracks progress, and uses guided AI support.',
+      icon: GraduationCap,
+    },
+    {
+      title: 'Parent',
+      description: 'Views progress, homework, notices, fees, and family-facing summaries from a simple companion portal.',
+      icon: Users,
+    },
+    {
+      title: 'Accountant',
+      description: 'Handles invoices, fee reminders, payments, receipts, and finance reporting for the institution.',
+      icon: CreditCard,
+    },
+  ];
+
+  const operations = [
+    'Academic years',
+    'Classes and sections',
+    'Subjects',
+    'Teachers',
+    'Students',
+    'Parents',
+    'Courses',
+    'Homework',
+    'Quizzes',
+    'Attendance',
+    'Notices',
     'Reports',
-    'Future AI Teacher',
+  ];
+
+  const aiTools = [
+    {
+      title: 'AI Quiz Generation',
+      description: 'Generate structured quiz drafts from lesson goals and source material for faster assessment prep.',
+      icon: Sparkles,
+    },
+    {
+      title: 'AI Lesson Assistance',
+      description: 'Support teachers with lesson ideas, worksheet outlines, and planning helpers inside classroom workflows.',
+      icon: BookOpen,
+    },
+    {
+      title: 'AI Feedback Summary',
+      description: 'Turn classroom performance signals into concise, review-friendly summaries for staff and leadership.',
+      icon: FileText,
+    },
+    {
+      title: 'Student AI Tutor',
+      description: 'Offer guided explanations, study prompts, and revision help within protected learner experiences.',
+      icon: Bot,
+    },
+    {
+      title: 'Parent AI Progress Summary',
+      description: 'Share clear family-facing updates that simplify academic progress, gaps, and next steps.',
+      icon: Home,
+    },
+    {
+      title: 'Source-Based Answers',
+      description: 'Ground AI responses against uploaded school resources so teams can move toward safer, traceable outputs.',
+      icon: Library,
+    },
+    {
+      title: 'Rewards and Motivation',
+      description: 'Encourage momentum through badges, streaks, appreciation moments, and positive learner reinforcement.',
+      icon: Flame,
+    },
+  ];
+
+  const dashboardCards = [
+    {
+      title: 'School Admin Dashboard',
+      description: 'Academic setup, staffing, class management, and operational oversight in one command center.',
+      icon: LayoutGrid,
+    },
+    {
+      title: 'Teacher Workspace',
+      description: 'Course delivery, homework review, quiz creation, attendance, and classroom AI support.',
+      icon: NotebookPen,
+    },
+    {
+      title: 'Student Learning',
+      description: 'Course access, submissions, quiz attempts, progress tracking, and learner-friendly guidance.',
+      icon: PlayCircle,
+    },
+    {
+      title: 'Parent Portal',
+      description: 'Progress snapshots, notices, homework visibility, fees, and family communication touchpoints.',
+      icon: Users,
+    },
+    {
+      title: 'Reports and Analytics',
+      description: 'Leadership visibility into attendance, performance, academic activity, and school operations.',
+      icon: FileBarChart2,
+    },
+    {
+      title: 'AI Tools',
+      description: 'A growing layer for quiz drafting, summaries, tutor support, and source-aware assistance.',
+      icon: Brain,
+    },
+  ];
+
+  const reasons = [
+    'Role-based access for every stakeholder',
+    'Multi-school SaaS architecture',
+    'Secure authentication and protected routes',
+    'Clean academic workflows for real schools',
+    'API-connected backend foundation',
+    'Scalable modules for future growth',
+  ];
+
+  const architectureCards = [
+    {
+      title: 'React Frontend',
+      description: 'Role-aware interfaces and polished school workflows for admins, teachers, students, parents, and finance teams.',
+      icon: LayoutGrid,
+    },
+    {
+      title: 'Backend APIs',
+      description: 'A modular backend foundation handles auth, CRUD operations, reporting, and domain services.',
+      icon: Briefcase,
+    },
+    {
+      title: 'Role-Based Auth',
+      description: 'Protected routes and backend-driven access keep each user inside the right workspace.',
+      icon: LockKeyhole,
+    },
+    {
+      title: 'PostgreSQL and Prisma',
+      description: 'Structured academic, billing, user, and AI-related data are modeled for long-term SaaS growth.',
+      icon: GalleryVerticalEnd,
+    },
+    {
+      title: 'AI Service Layer',
+      description: 'The platform direction supports AI generation, source workflows, and future review and moderation steps.',
+      icon: Bot,
+    },
+    {
+      title: 'Future-Ready SaaS Structure',
+      description: 'The product is positioned to expand into multi-branch education groups and advanced operational modules.',
+      icon: Layers3,
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(10,77,255,0.12),_transparent_26%),linear-gradient(180deg,#f8fbff_0%,#eef4ff_48%,#ffffff_100%)] text-foreground">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <nav className="flex flex-col gap-4 rounded-[32px] border border-white/70 bg-white/90 px-5 py-4 shadow-sm shadow-slate-200/60 backdrop-blur md:flex-row md:items-center md:justify-between">
+    <div className="app-grid landing-page min-h-screen text-foreground">
+      <div className="shell px-4 py-6 sm:px-6 lg:px-8">
+        <nav className="flex flex-col gap-4 rounded-[32px] border border-slate-200/80 bg-white/90 px-5 py-4 shadow-[0_24px_60px_rgba(8,42,54,0.08)] backdrop-blur md:flex-row md:items-center md:justify-between">
           <BrandMark />
+          <div className="hidden items-center gap-8 text-sm font-extrabold uppercase tracking-[0.16em] text-foreground lg:flex">
+            <a href="#features">Features</a>
+            <a href="#roles">Roles</a>
+            <a href="#ai-tools">AI Tools</a>
+            <a href="#architecture">Architecture</a>
+          </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => navigate('/login')}>
               Login
             </Button>
-            <Button onClick={() => navigate('/role-detection')}>View Demo</Button>
+            <Button variant="outline" onClick={() => navigate('/request-demo')}>Book Demo</Button>
+            <Button onClick={() => navigate('/role-detection')}>Start Demo</Button>
           </div>
         </nav>
 
-        <section className="grid gap-8 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="space-y-6">
-            <Badge variant="primary" className="rounded-full px-4 py-1.5">
-              Client-presentation ready school SaaS frontend
+        <section className="grid gap-8 py-14 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:py-18">
+          <div className="space-y-7">
+            <Badge variant="warning" className="px-4 py-1.5">
+              Modern School SaaS
             </Badge>
             <div className="space-y-4">
-              <h1 className="max-w-4xl text-5xl font-semibold tracking-tight text-slate-900 md:text-6xl">
-                {brand.name}
+              <h1 className="landing-hero-title max-w-5xl text-[#1e293b]">
+                Modern School LMS with AI-Powered Learning Workflows
               </h1>
-              <p className="max-w-3xl text-lg text-slate-600 md:text-xl">{brand.tagline}</p>
+              <p className="max-w-3xl text-lg leading-8 text-slate-600 md:text-xl">
+                Manage academics, teachers, students, parents, courses, homework, quizzes, attendance, reports, fees,
+                and AI learning tools from one secure role-based platform.
+              </p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Built for schools, coaching institutes, and multi-branch education organizations.
+              </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => navigate('/login')}>
-                Login
+              <Button size="lg" variant="outline" onClick={() => navigate('/request-demo')}>
+                Book Demo
               </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate('/role-detection')}>
-                View Demo
+              <Button size="lg" onClick={() => navigate('/role-detection')}>
+                Start Demo
+              </Button>
+              <Button size="lg" variant="ghost" onClick={() => navigate('/login')}>
+                Login
               </Button>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Card className="rounded-3xl border-none bg-white/90">
-                <CardContent className="p-5">
-                  <p className="text-sm text-muted-foreground">Schools</p>
-                  <p className="mt-2 text-3xl font-semibold">128</p>
-                </CardContent>
-              </Card>
-              <Card className="rounded-3xl border-none bg-white/90">
-                <CardContent className="p-5">
-                  <p className="text-sm text-muted-foreground">Students</p>
-                  <p className="mt-2 text-3xl font-semibold">42.5K</p>
-                </CardContent>
-              </Card>
-              <Card className="rounded-3xl border-none bg-white/90">
-                <CardContent className="p-5">
-                  <p className="text-sm text-muted-foreground">Roles</p>
-                  <p className="mt-2 text-3xl font-semibold">7</p>
-                </CardContent>
-              </Card>
+              {trustCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Card key={card.title} className="landing-trust-card">
+                    <CardContent className="p-5">
+                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-primary">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <p className="text-base font-bold text-slate-900">{card.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{card.description}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
 
-          <Card className="overflow-hidden rounded-[36px] border-none bg-slate-950 text-white shadow-2xl shadow-primary/15">
-            <CardContent className="space-y-6 p-6">
+          <Card className="landing-hero-panel overflow-hidden border border-slate-200/80 bg-white/95">
+            <CardContent className="space-y-6 p-6 md:p-8">
               <div className="flex items-center justify-between">
-                <Badge variant="secondary" className="border-white/10 bg-white/10 text-white">
-                  How Platform Works
+                <Badge variant="secondary" className="bg-warning text-foreground">
+                  School Workflow View
                 </Badge>
-                <Sparkles className="h-5 w-5 text-secondary" />
+                <Sparkles className="h-5 w-5 text-warning" />
               </div>
-              <div className="space-y-4">
-                {platformFlow.map((step, index) => (
-                  <div key={step} className="flex items-center gap-4 rounded-3xl bg-white/5 px-4 py-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-sm font-semibold">
-                      {index + 1}
+              <div className="grid gap-3">
+                {[
+                  {
+                    title: 'School setup and onboarding',
+                    description: 'Launch schools, assign admin access, and prepare academic structures with operational control.',
+                    icon: Building2,
+                  },
+                  {
+                    title: 'Academic and classroom workflows',
+                    description: 'Move from classes and subjects to courses, homework, quizzes, attendance, and reports.',
+                    icon: ClipboardCheck,
+                  },
+                  {
+                    title: 'Family and finance visibility',
+                    description: 'Connect parent progress tracking, notices, fee operations, and communication touchpoints.',
+                    icon: CreditCard,
+                  },
+                  {
+                    title: 'AI-enhanced teaching and learning',
+                    description: 'Add structured AI support for lesson assistance, tutor experiences, and source-aware outputs.',
+                    icon: Brain,
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.title}
+                      className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)]"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-primary/10 text-primary">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold uppercase tracking-[0.16em] text-primary-hover">{item.title}</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 text-sm text-white/85">{step}</div>
-                    {index < platformFlow.length - 1 ? <ChevronRight className="h-4 w-4 text-white/50" /> : <CheckCircle2 className="h-4 w-4 text-secondary" />}
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+              <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#effcfb_0%,#ffffff_100%)] p-5">
+                <p className="text-sm font-bold uppercase tracking-[0.18em] text-primary-hover">Client-ready positioning</p>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Present one platform for leadership, operations, teachers, students, parents, and finance teams without changing the
+                  route structure or the backend-connected product direction already in place.
+                </p>
               </div>
             </CardContent>
           </Card>
         </section>
 
-        <section className="space-y-6 py-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-semibold">Role Cards</h2>
-              <p className="text-muted-foreground">Every stakeholder gets a dashboard that matches their real-world workflow.</p>
-            </div>
+        <section id="features" className="space-y-6 py-8 md:py-10">
+          <div className="max-w-3xl">
+            <p className="section-label">School Operations</p>
+            <h2 className="mt-3">Run daily school operations from one coordinated academic system.</h2>
+            <p className="mt-3 text-base leading-7 text-slate-600">
+              The platform is designed for real institutions that need structured academic setup, role clarity, classroom execution,
+              and administrative visibility without switching between disconnected tools.
+            </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {demoRoles.map((role) => (
-              <Card key={role.role} className="rounded-3xl border-white/70 bg-white/90">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <RoleBadge role={role.role} />
-                    {(() => {
-                      const Icon = iconForPath(role.route);
-                      return <Icon className="h-5 w-5 text-primary" />;
-                    })()}
-                  </div>
-                  <CardTitle className="text-xl">{role.label}</CardTitle>
-                  <CardDescription>{role.description}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
+            {operations.map((item, index) => {
+              const tone =
+                index % 4 === 0
+                  ? 'bg-[#fff7e7]'
+                  : index % 4 === 1
+                    ? 'bg-[#effcfb]'
+                    : index % 4 === 2
+                      ? 'bg-[#f5f3ff]'
+                      : 'bg-white';
+              return (
+                <Card key={item} className={`border border-slate-200/80 ${tone} shadow-[0_18px_42px_rgba(15,23,42,0.05)]`}>
+                  <CardHeader>
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-primary">
+                      {index % 3 === 0 ? (
+                        <CalendarCheck2 className="h-5 w-5" />
+                      ) : index % 3 === 1 ? (
+                        <Users className="h-5 w-5" />
+                      ) : (
+                        <BookOpen className="h-5 w-5" />
+                      )}
+                    </div>
+                    <CardTitle className="text-xl">{item}</CardTitle>
+                  </CardHeader>
+                </Card>
+              );
+            })}
           </div>
         </section>
 
-        <section className="grid gap-6 py-10 lg:grid-cols-[0.95fr_1.05fr]">
+        <section id="roles" className="space-y-6 py-8 md:py-10">
+          <div className="max-w-3xl">
+            <p className="section-label">Role-Based Platform</p>
+            <h2 className="mt-3">Every stakeholder gets a purposeful workspace.</h2>
+            <p className="mt-3 text-base leading-7 text-slate-600">
+              From platform owners to parents, each role is meant to see the right dashboards, tools, and responsibilities
+              without clutter or permission confusion.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {roleCards.map((role) => {
+              const Icon = role.icon;
+              return (
+                <Card key={role.title} className="border border-slate-200/80 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.05)]">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="rounded-[18px] bg-accent px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary-hover">
+                        Role Workspace
+                      </div>
+                      <div className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-slate-200 bg-slate-50 text-primary">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                    <CardTitle className="text-xl">{role.title}</CardTitle>
+                    <CardDescription className="text-sm leading-6 text-slate-600">{role.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        <section id="ai-tools" className="space-y-6 py-8 md:py-10">
+          <div className="max-w-3xl">
+            <p className="section-label">AI Learning Tools</p>
+            <h2 className="mt-3">Bring classroom support and academic workflows into one AI-ready product layer.</h2>
+            <p className="mt-3 text-base leading-7 text-slate-600">
+              AI features should strengthen teaching, simplify review, support learners responsibly, and help families stay informed.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {aiTools.map((tool, index) => {
+              const Icon = tool.icon;
+              const tone =
+                index % 3 === 0
+                  ? 'bg-[#effcfb]'
+                  : index % 3 === 1
+                    ? 'bg-[#fff7e7]'
+                    : 'bg-white';
+              return (
+                <Card key={tool.title} className={`border border-slate-200/80 ${tone} shadow-[0_18px_42px_rgba(15,23,42,0.05)]`}>
+                  <CardHeader>
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <CardTitle className="text-xl">{tool.title}</CardTitle>
+                    <CardDescription className="text-sm leading-6 text-slate-600">{tool.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="space-y-6 py-8 md:py-10">
+          <div className="max-w-3xl">
+            <p className="section-label">Dashboard Preview</p>
+            <h2 className="mt-3">Preview the operational surfaces schools expect from a modern LMS.</h2>
+            <p className="mt-3 text-base leading-7 text-slate-600">
+              The website should help buyers understand that the platform already thinks in terms of school operations,
+              teaching workflows, learner journeys, family visibility, and analytics.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {dashboardCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <Card key={card.title} className="border border-slate-200/80 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.05)]">
+                  <CardHeader>
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <CardTitle className="text-xl">{card.title}</CardTitle>
+                    <CardDescription className="text-sm leading-6 text-slate-600">{card.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="grid gap-6 py-8 md:py-10 lg:grid-cols-[0.95fr_1.05fr]">
           <SectionCard
-            title="Platform Features"
-            description="A white-label LMS that clearly communicates the full operating model to schools and investors."
+            title="Why Schools Choose This Platform"
+            description="The product direction combines practical school operations with a scalable SaaS foundation."
           >
-            <div className="grid gap-3 md:grid-cols-2">
-              {features.map((feature) => (
-                <div key={feature} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-medium">{feature}</p>
+            <div className="grid gap-3">
+              {reasons.map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center gap-3 rounded-[20px] border border-slate-200 bg-white px-4 py-4 shadow-[0_12px_24px_rgba(15,23,42,0.05)]"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-primary-hover" />
+                  <p className="text-sm font-semibold text-slate-700">{item}</p>
                 </div>
               ))}
             </div>
           </SectionCard>
 
-          <Card className="rounded-[32px] border-white/70 bg-white/90 shadow-sm">
+          <Card id="architecture" className="border border-slate-200/80 bg-white shadow-[0_24px_60px_rgba(8,42,54,0.08)]">
             <CardHeader>
-              <CardTitle className="text-2xl">What the demo already shows</CardTitle>
-              <CardDescription>
-                Common login, role detection, role-specific layouts, multi-school SaaS operations, and backend-ready static data.
+              <CardTitle className="text-2xl">Architecture</CardTitle>
+              <CardDescription className="text-sm leading-6 text-slate-600">
+                The platform is structured to connect a modern React frontend, protected backend APIs, role-aware access,
+                data persistence, and an expandable AI service layer.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
-              {[
-                'Super Admin SaaS flow',
-                'School Admin setup flow',
-                'Teacher learning management flow',
-                'Student mobile learning flow',
-                'Parent child monitoring flow',
-                'Principal reports flow',
-                'Accountant fee management flow',
-                'Reusable LMS UI components',
-              ].map((item) => (
-                <div key={item} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  {item}
-                </div>
-              ))}
+              {architectureCards.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.title}
+                    className="rounded-[22px] border border-slate-200 bg-slate-50/70 px-4 py-4 shadow-[0_10px_22px_rgba(15,23,42,0.04)]"
+                  >
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[16px] bg-white text-primary shadow-sm">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <p className="text-sm font-bold uppercase tracking-[0.16em] text-primary-hover">{item.title}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         </section>
+
+        <section className="py-10">
+          <Card className="overflow-hidden border border-slate-200/80 bg-[linear-gradient(135deg,#082a36_0%,#0f4d5c_52%,#1d7d84_100%)] text-white shadow-[0_28px_70px_rgba(8,42,54,0.22)]">
+            <CardContent className="grid gap-8 p-8 md:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div className="space-y-4">
+                <Badge variant="warning" className="w-fit bg-warning text-foreground">
+                  Final CTA
+                </Badge>
+                <h2 className="max-w-3xl text-white">Ready to modernize your school operations?</h2>
+                <p className="max-w-2xl text-sm leading-7 text-white/78 md:text-base">
+                  Explore the role-based product experience, review the academic workflow direction, and start planning a
+                  school LMS that is ready for operational growth and AI-supported learning.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button size="lg" variant="outline" onClick={() => navigate('/request-demo')}>
+                  Request Demo
+                </Button>
+                <Button size="lg" onClick={() => navigate('/login')}>
+                  Login
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <footer className="flex flex-col gap-3 py-8 text-sm font-semibold text-muted-foreground md:flex-row md:items-center md:justify-between">
+          <p>{brand.name} for schools, coaching institutes, and AI-first learning teams.</p>
+          <div className="flex gap-4">
+            <button type="button" onClick={() => navigate('/request-demo')}>Contact Sales</button>
+            <button type="button" onClick={() => navigate('/login')}>Login</button>
+          </div>
+        </footer>
       </div>
     </div>
   );
@@ -2130,69 +2728,359 @@ function LandingPage() {
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { setAuthenticated } = useDemoApp();
+  const { error, login, status } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState('');
+
+  const handleLogin = async () => {
+    setLocalError('');
+
+    if (!email.trim() || !password.trim()) {
+      setLocalError('Enter both email and password.');
+      return;
+    }
+
+    try {
+      await login({
+        email: email.trim(),
+        password,
+      });
+      navigate('/role-detection');
+    } catch {
+      // Error state is rendered from auth context.
+    }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(135deg,#eef4ff_0%,#f8fbff_50%,#ffffff_100%)] p-4">
-      <Card className="w-full max-w-5xl overflow-hidden rounded-[36px] border-white/70 bg-white/90 shadow-2xl shadow-slate-200/80">
+    <div className="auth-shell flex items-center justify-center">
+      <Card className="auth-card-grid w-full max-w-6xl overflow-hidden">
         <div className="grid lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="bg-slate-950 p-8 text-white">
+          <div className="auth-highlight p-8 md:p-10 text-white">
             <BrandMark />
-            <div className="mt-10 space-y-4">
-              <h1 className="text-4xl font-semibold">Common Login</h1>
-              <p className="text-white/80">
-                Use one entry point for school owners, principals, teachers, students, parents, and accountants.
+            <div className="auth-copy mt-10 space-y-4">
+              <Badge variant="warning" className="w-fit">Unified Access</Badge>
+              <h1 className="text-4xl font-extrabold tracking-[-0.05em]">Common Login</h1>
+              <p className="max-w-lg text-white/80">
+                Use one entry point for school owners, principals, teachers, students, parents, and accountants with backend-driven role access.
               </p>
             </div>
             <div className="mt-8 space-y-3">
               {[
-                'Password or OTP mock verification',
+                'Email and password verification',
                 'Role detection after login',
-                'Frontend-only demo role access',
-                'Backend-ready route structure',
+                'Refresh token retry on 401',
+                'Protected backend route structure',
               ].map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/8 px-4 py-3 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-secondary" />
+                <div key={item} className="flex items-center gap-3 rounded-[20px] border-[2px] border-white bg-white/8 px-4 py-3 text-sm shadow-[4px_4px_0_0_#ffffff]">
+                  <CheckCircle2 className="h-4 w-4 text-warning" />
                   {item}
                 </div>
               ))}
             </div>
           </div>
-          <CardContent className="space-y-6 p-8">
+          <CardContent className="space-y-6 p-8 md:p-10">
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-primary">Login</p>
-              <h2 className="mt-2 text-3xl font-semibold">Access the school workspace</h2>
+              <p className="section-label">Login</p>
+              <h2 className="mt-3 text-3xl font-extrabold">Access the school workspace</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                No real authentication is connected yet. This demo keeps the UI and navigation ready for later backend integration.
+                Sign in with a seeded backend account. Your role and route access come from the API.
               </p>
             </div>
             <div className="grid gap-4">
-              <Input label="Email / Mobile / Student ID" placeholder="principal@greenvalley.edu or +91 98765 40101" />
-              <Input label="Password (optional)" type="password" placeholder="Enter password if available" />
-              <Input label="School code (optional)" placeholder="GVPS-2026" />
+              <Input
+                label="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="principal@greenfield.demo.school"
+              />
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="ChangeMe123!"
+              />
             </div>
+            {localError ? (
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {localError}
+              </div>
+            ) : null}
+            {error ? (
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {error.message}
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleLogin} disabled={status === 'loading'}>
+                <LockKeyhole className="h-4 w-4" />
+                {status === 'loading' ? 'Signing In...' : 'Login'}
+              </Button>
+              {isSuperAdminSignupEnabled ? (
+                <Button variant="outline" onClick={() => navigate('/super-admin/signup')}>
+                  Create platform administrator
+                </Button>
+              ) : null}
+              <Button variant="outline" onClick={() => navigate('/')}>
+                Back
+              </Button>
+            </div>
+            <div className="rounded-[20px] border-[2px] border-border bg-accent px-4 py-3 text-sm font-medium text-muted-foreground shadow-[4px_4px_0_0_var(--color-border)]">
+              Seeded example: `principal@greenfield.demo.school` / `ChangeMe123!`
+            </div>
+            {isSuperAdminSignupEnabled ? (
+              <div className="rounded-[20px] border-[2px] border-border bg-white px-4 py-3 text-sm font-medium text-muted-foreground shadow-[4px_4px_0_0_var(--color-border)]">
+                Super Admin signup is enabled only for controlled setup. Once a Super Admin exists,
+                the backend will block additional public signups.
+              </div>
+            ) : null}
+          </CardContent>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function SuperAdminSignupPage() {
+  const navigate = useNavigate();
+  const { error, signupSuperAdmin, status } = useAuth();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [localError, setLocalError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const passwordRequirements = getPasswordRequirementStates(password);
+
+  const validateForm = () => {
+    const trimmedFullName = fullName.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedFullName || !trimmedEmail || !password || !confirmPassword) {
+      return 'Enter full name, email, password, and confirm password.';
+    }
+
+    if (trimmedFullName.length < 2 || trimmedFullName.length > 120) {
+      return 'Full name must be between 2 and 120 characters.';
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      return 'Enter a valid email address.';
+    }
+
+    if (trimmedPhone && !phonePattern.test(trimmedPhone)) {
+      return 'Phone must be a valid international number with 8 to 15 digits.';
+    }
+
+    if (!passwordStrengthPattern.test(password)) {
+      return 'Password must include uppercase, lowercase, number, and special character.';
+    }
+
+    if (password !== confirmPassword) {
+      return 'Confirm password must match password.';
+    }
+
+    return null;
+  };
+
+  const handleSignup = async () => {
+    setLocalError('');
+    setSuccessMessage('');
+
+    if (!isSuperAdminSignupEnabled) {
+      setLocalError('Super Admin signup is disabled in this environment.');
+      return;
+    }
+
+    const validationError = validateForm();
+    if (validationError) {
+      setLocalError(validationError);
+      return;
+    }
+
+    try {
+      const result = await signupSuperAdmin({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        password,
+        confirmPassword,
+      });
+
+      if (result.mode === 'authenticated') {
+        navigate('/super-admin/dashboard', { replace: true });
+        return;
+      }
+
+      setSuccessMessage(result.message || 'Account created successfully. Please sign in.');
+      window.setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 1200);
+    } catch {
+      // Error state is rendered from auth context.
+    }
+  };
+
+  return (
+    <div className="auth-shell flex items-center justify-center">
+      <Card className="auth-card-grid w-full max-w-6xl overflow-hidden">
+        <div className="grid lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="auth-highlight p-8 md:p-10 text-white">
+            <BrandMark />
+            <div className="auth-copy mt-10 space-y-4">
+              <Badge variant="warning" className="w-fit">Initial Setup</Badge>
+              <h1 className="text-4xl font-extrabold tracking-[-0.05em]">Platform Administrator Signup</h1>
+              <p className="text-white/80">
+                Use this only during initial platform setup. The backend requires the signup flag to
+                be enabled and allows just the first Super Admin account.
+              </p>
+            </div>
+            <div className="mt-8 space-y-3">
+              {[
+                'Public endpoint is environment-gated',
+                'Creates only the initial SUPER_ADMIN',
+                'Uses the existing auth session flow',
+                'Audit log entry is created on success',
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-3 rounded-[20px] border-[2px] border-white bg-white/8 px-4 py-3 text-sm shadow-[4px_4px_0_0_#ffffff]">
+                  <CheckCircle2 className="h-4 w-4 text-warning" />
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+          <CardContent className="space-y-6 p-8 md:p-10">
+            <div>
+              <p className="section-label">Platform Setup</p>
+              <h2 className="mt-3 text-3xl font-extrabold">Create the first platform administrator</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This flow reuses the current auth session handling and routes you into the existing
+                Super Admin dashboard on success.
+              </p>
+            </div>
+            <div className="grid gap-4">
+              <Input
+                label="Full Name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                placeholder="Platform Owner"
+              />
+              <Input
+                label="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="owner@example.com"
+              />
+              <Input
+                label="Phone (optional)"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="+919999999999"
+              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Password</label>
+                <div className="relative">
+                  <Input
+                    className="pr-12"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="StrongPassword123!"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="grid gap-2 rounded-[20px] border-[2px] border-border bg-accent px-4 py-3 text-sm shadow-[4px_4px_0_0_var(--color-border)]">
+                {passwordRequirements.map((requirement) => (
+                  <div
+                    key={requirement.label}
+                    className={
+                      requirement.met
+                        ? 'flex items-center gap-2 text-emerald-700'
+                        : 'flex items-center gap-2 text-muted-foreground'
+                    }
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {requirement.label}
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Confirm Password</label>
+                <div className="relative">
+                  <Input
+                    className="pr-12"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="StrongPassword123!"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    onClick={() => setShowConfirmPassword((current) => !current)}
+                    aria-label={
+                      showConfirmPassword
+                        ? 'Hide confirm password'
+                        : 'Show confirm password'
+                    }
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+            {localError ? (
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {localError}
+              </div>
+            ) : null}
+            {error ? (
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {error.message}
+              </div>
+            ) : null}
+            {successMessage ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {successMessage}
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-3">
               <Button
-                onClick={() => {
-                  setAuthenticated(true);
-                  navigate('/otp');
-                }}
+                onClick={handleSignup}
+                disabled={status === 'loading' || !isSuperAdminSignupEnabled}
               >
-                <LockKeyhole className="h-4 w-4" />
-                Login with OTP
+                <ShieldPlus className="h-4 w-4" />
+                {status === 'loading' ? 'Creating...' : 'Create platform administrator'}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAuthenticated(true);
-                  navigate('/role-detection');
-                }}
-              >
-                Continue
+              <Button variant="outline" onClick={() => navigate('/login')}>
+                Back to Login
               </Button>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-muted-foreground">
-              Demo note: school code can later map users to the correct subdomain and tenant context.
+            <div className="rounded-[20px] border-[2px] border-border bg-white px-4 py-3 text-sm font-medium text-muted-foreground shadow-[4px_4px_0_0_var(--color-border)]">
+              Enable `VITE_SUPER_ADMIN_SIGNUP_ENABLED=true` in the frontend and
+              `SUPER_ADMIN_SIGNUP_ENABLED=true` in the backend only for initial setup.
             </div>
           </CardContent>
         </div>
@@ -2203,18 +3091,17 @@ function LoginPage() {
 
 function OtpPage() {
   const navigate = useNavigate();
-  const { setAuthenticated } = useDemoApp();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(135deg,#eef4ff_0%,#ffffff_100%)] p-4">
-      <Card className="w-full max-w-xl rounded-[36px] border-white/70 bg-white/95 shadow-xl shadow-slate-200/70">
+    <div className="auth-shell flex items-center justify-center">
+      <Card className="w-full max-w-xl bg-white">
         <CardHeader>
           <Badge variant="primary" className="w-fit">
             OTP Verification
           </Badge>
           <CardTitle className="text-3xl">Enter the 6-digit OTP</CardTitle>
           <CardDescription>
-            Static OTP screen for the frontend demo. In production, the backend will verify the code and detect the role automatically.
+            OTP login is not exposed by the current backend. Use the email and password login flow for seeded users.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -2222,27 +3109,21 @@ function OtpPage() {
             {Array.from({ length: 6 }).map((_, index) => (
               <input
                 key={index}
-                className="h-14 rounded-2xl border border-input bg-background text-center text-xl font-semibold outline-none"
+                className="h-14 rounded-[18px] border-[2px] border-input bg-background text-center text-xl font-extrabold shadow-[4px_4px_0_0_var(--color-border)] outline-none"
                 maxLength={1}
               />
             ))}
           </div>
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm text-muted-foreground">
+          <div className="flex items-center justify-between rounded-[20px] border-[2px] border-border bg-accent px-4 py-3 text-sm font-medium text-muted-foreground shadow-[4px_4px_0_0_var(--color-border)]">
             <span>Resend OTP</span>
             <span>00:45</span>
           </div>
           <div className="flex gap-3">
-            <Button
-              className="flex-1"
-              onClick={() => {
-                setAuthenticated(true);
-                navigate('/role-detection');
-              }}
-            >
-              Verify
+            <Button className="flex-1" onClick={() => navigate('/login')}>
+              Back to Login
             </Button>
             <Button variant="outline" className="flex-1">
-              Resend OTP
+              Unavailable
             </Button>
           </div>
         </CardContent>
@@ -2253,63 +3134,63 @@ function OtpPage() {
 
 function RoleDetectionPage() {
   const navigate = useNavigate();
-  const { setRole } = useDemoApp();
+  const { isAuthenticated, user } = useAuth();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setChecking(false), 1200);
+    if (!isAuthenticated || !user) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setChecking(false);
+      navigate(roleRoutes[user.role], { replace: true });
+    }, 1200);
+
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [isAuthenticated, navigate, user]);
+
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#eef4ff_0%,#ffffff_100%)] px-4 py-8">
+    <div className="auth-shell px-4 py-8">
       <div className="mx-auto max-w-6xl">
-        <Card className="rounded-[36px] border-white/70 bg-white/90 shadow-xl shadow-slate-200/70">
+        <Card className="bg-white">
           <CardContent className="space-y-8 p-8">
             <div className="space-y-3 text-center">
               <Badge variant="secondary" className="mx-auto w-fit">
-                Demo Role Access
+                Role Detection
               </Badge>
-              <h1 className="text-4xl font-semibold">Checking your role and opening your dashboard...</h1>
+              <h1 className="text-4xl font-extrabold tracking-[-0.05em]">Checking your role and opening your dashboard...</h1>
               <p className="text-muted-foreground">
-                For frontend demo only. In production, the backend will automatically identify the role.
+                Your role is coming from the authenticated backend user record.
               </p>
             </div>
 
+            <div className="mx-auto flex max-w-xl items-center gap-4 rounded-[24px] border-[3px] border-border bg-accent px-5 py-4 shadow-[6px_6px_0_0_var(--color-border)]">
+              <div className="h-10 w-10 animate-pulse rounded-[16px] border-2 border-border bg-primary/30" />
+              <div>
+                <p className="font-bold text-foreground">{user.fullName}</p>
+                <p className="text-sm font-medium text-muted-foreground">{roleMeta[platformRoleToAppRole[user.role]].label}</p>
+              </div>
+            </div>
+
             {checking ? (
-              <div className="mx-auto flex max-w-xl items-center gap-4 rounded-3xl border border-primary/15 bg-primary/5 px-5 py-4">
-                <div className="h-10 w-10 animate-pulse rounded-2xl bg-primary/20" />
+              <div className="mx-auto flex max-w-xl items-center gap-4 rounded-[24px] border-[3px] border-border bg-white px-5 py-4 shadow-[6px_6px_0_0_var(--color-border)]">
+                <div className="h-10 w-10 animate-pulse rounded-[16px] border-2 border-border bg-warning/60" />
                 <div>
-                  <p className="font-medium text-foreground">Role detection in progress</p>
+                  <p className="font-bold text-foreground">Role detection in progress</p>
                   <p className="text-sm text-muted-foreground">Preparing a role-aware route and dashboard shell.</p>
                 </div>
               </div>
-            ) : null}
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {demoRoles.map((role) => (
-                <Card
-                  key={role.role}
-                  className="cursor-pointer rounded-3xl border-white/70 bg-white transition-transform hover:-translate-y-1"
-                  onClick={() => {
-                    setRole(role.role);
-                    navigate(role.route);
-                  }}
-                >
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <RoleBadge role={role.role} />
-                      {(() => {
-                        const Icon = iconForPath(role.route);
-                        return <Icon className="h-5 w-5 text-primary" />;
-                      })()}
-                    </div>
-                    <CardTitle className="text-xl">{role.label}</CardTitle>
-                    <CardDescription>{role.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            ) : (
+              <div className="text-center text-sm text-muted-foreground">
+                Redirecting to {roleRoutes[user.role]}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -2318,6 +3199,218 @@ function RoleDetectionPage() {
 }
 
 function ScreenRoute({ screen }: { screen: ScreenSpec }) {
+  if (screen.path === '/super-admin/schools') {
+    return <SuperAdminSchoolsPage />;
+  }
+
+  if (screen.path === '/super-admin/subscription-plans') {
+    return <SuperAdminSubscriptionPlansPage />;
+  }
+
+  if (screen.path === '/super-admin/billing') {
+    return <SuperAdminBillingPageRoute />;
+  }
+
+  if (screen.path === '/super-admin/reports') {
+    return <SuperAdminReportsPage />;
+  }
+
+  if (screen.path === '/super-admin/ai-modules') {
+    return <SuperAdminAiModulesPage />;
+  }
+
+  if (screen.path === '/super-admin/ai-usage') {
+    return <SuperAdminAiUsagePage />;
+  }
+
+  if (screen.path === '/school-admin/courses') {
+    return <SchoolAdminCoursesPage />;
+  }
+
+  if (screen.path === '/school-admin/homework') {
+    return <SchoolAdminHomeworkPage />;
+  }
+
+  if (screen.path === '/school-admin/quizzes') {
+    return <SchoolAdminQuizzesPage />;
+  }
+
+  if (screen.path === '/school-admin/attendance') {
+    return <SchoolAdminAttendancePage />;
+  }
+
+  if (screen.path === '/school-admin/reports') {
+    return <SchoolAdminReportsPageRoute />;
+  }
+
+  if (screen.path === '/school-admin/source-library') {
+    return <SchoolAdminSourceLibraryPage />;
+  }
+
+  if (screen.path === '/school-admin/ai-settings') {
+    return <SchoolAdminAiSettingsPage />;
+  }
+
+  if (screen.path === '/school-admin/ai-usage') {
+    return <SchoolAdminAiUsagePage />;
+  }
+
+  if (screen.path === '/school-admin/teachers') {
+    return <SchoolAdminTeachersPage />;
+  }
+
+  if (screen.path === '/school-admin/students') {
+    return <SchoolAdminStudentsPage />;
+  }
+
+  if (screen.path === '/school-admin/parents') {
+    return <SchoolAdminParentsPage />;
+  }
+
+  if (screen.path === '/school-admin/classes-sections') {
+    return <SchoolAdminClassesSectionsPage />;
+  }
+
+  if (screen.path === '/school-admin/academic-years') {
+    return <SchoolAdminAcademicYearsPage />;
+  }
+
+  if (screen.path === '/school-admin/subjects') {
+    return <SchoolAdminSubjectsPage />;
+  }
+
+  if (screen.path === '/principal/student-reports') {
+    return <PrincipalStudentReportsPage />;
+  }
+
+  if (screen.path === '/principal/teacher-reports') {
+    return <PrincipalTeacherReportsPage />;
+  }
+
+  if (screen.path === '/principal/attendance-reports') {
+    return <PrincipalAttendanceReportsPage />;
+  }
+
+  if (screen.path === '/principal/quiz-reports') {
+    return <PrincipalQuizReportsPage />;
+  }
+
+  if (screen.path === '/principal/homework-reports') {
+    return <PrincipalHomeworkReportsPage />;
+  }
+
+  if (screen.path === '/teacher/courses') {
+    return <TeacherCoursesPage />;
+  }
+
+  if (screen.path === '/teacher/videos/upload') {
+    return <TeacherVideoUploadPage />;
+  }
+
+  if (screen.path === '/teacher/homework/create') {
+    return <TeacherHomeworkCreatePage />;
+  }
+
+  if (screen.path === '/teacher/homework/review') {
+    return <TeacherHomeworkReviewPage />;
+  }
+
+  if (screen.path === '/teacher/quizzes/create') {
+    return <TeacherQuizzesCreatePage />;
+  }
+
+  if (screen.path === '/teacher/attendance') {
+    return <TeacherAttendancePage />;
+  }
+
+  if (screen.path === '/teacher/student-performance') {
+    return <TeacherStudentPerformancePageRoute />;
+  }
+
+  if (screen.path === '/teacher/source-library') {
+    return <TeacherSourceLibraryPage />;
+  }
+
+  if (screen.path === '/teacher/profile') {
+    return <TeacherProfilePage />;
+  }
+
+  if (screen.path === '/student/courses') {
+    return <StudentCoursesPage />;
+  }
+
+  if (screen.path === '/student/homework') {
+    return <StudentHomeworkPage />;
+  }
+
+  if (screen.path === '/student/quiz') {
+    return <StudentQuizPage />;
+  }
+
+  if (screen.path === '/student/quiz/attempt') {
+    return <StudentQuizAttemptPage />;
+  }
+
+  if (screen.path === '/student/quiz/result') {
+    return <StudentQuizResultPage />;
+  }
+
+  if (screen.path === '/student/attendance') {
+    return <StudentAttendancePageRoute />;
+  }
+
+  if (screen.path === '/student/profile') {
+    return <StudentProfilePage />;
+  }
+
+  if (screen.path === '/parent/homework') {
+    return <ParentHomeworkPage />;
+  }
+
+  if (screen.path === '/parent/quiz-results') {
+    return <ParentQuizResultsPage />;
+  }
+
+  if (screen.path === '/parent/attendance') {
+    return <ParentAttendancePageRoute />;
+  }
+
+  if (screen.path === '/parent/fees') {
+    return <ParentFeesPageRoute />;
+  }
+
+  if (screen.path === '/parent/ai-progress') {
+    return <ParentAiProgressPageRoute />;
+  }
+
+  if (screen.path === '/parent/profile') {
+    return <ParentProfilePage />;
+  }
+
+  if (screen.path === '/accountant/fee-invoices') {
+    return <AccountantFeeInvoicesPage />;
+  }
+
+  if (screen.path === '/accountant/payments') {
+    return <AccountantPaymentsPage />;
+  }
+
+  if (screen.path === '/accountant/pending-fees') {
+    return <AccountantPendingFeesPage />;
+  }
+
+  if (screen.path === '/accountant/receipts') {
+    return <AccountantReceiptsPage />;
+  }
+
+  if (screen.path === '/accountant/reports') {
+    return <AccountantReportsPageRoute />;
+  }
+
+  if (screen.path === '/accountant/reminders') {
+    return <AccountantRemindersPage />;
+  }
+
   return <WorkspacePage screen={screen} />;
 }
 
@@ -2325,18 +3418,21 @@ function renderRoleRoutes(role: Role) {
   const screens = roleScreens[role];
   const basePath = roleMeta[role].basePath;
   const defaultRelative = screens[0].path.replace(`${basePath}/`, '');
+  const customRoutePaths = role === 'super-admin' ? new Set(['/super-admin/schools/create']) : new Set<string>();
+  const routedScreens = screens.filter((screen) => !customRoutePaths.has(screen.path));
 
   return (
     <Route
       path={basePath}
       element={
-        <RequireDemoAuth>
+        <ProtectedRoute allowedRoles={[appRoleToPlatformRole[role]]}>
           <RoleLayout role={role} />
-        </RequireDemoAuth>
+        </ProtectedRoute>
       }
     >
       <Route index element={<Navigate to={defaultRelative} replace />} />
-      {screens.map((screen) => (
+      {role === 'super-admin' ? <Route path="schools/create" element={<CreateSchoolPage />} /> : null}
+      {routedScreens.map((screen) => (
         <Route key={screen.path} path={screen.path.replace(`${basePath}/`, '')} element={<ScreenRoute screen={screen} />} />
       ))}
     </Route>
@@ -2379,8 +3475,11 @@ function AppFrame() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/super-admin/signup" element={<SuperAdminSignupPage />} />
         <Route path="/otp" element={<OtpPage />} />
         <Route path="/role-detection" element={<RoleDetectionPage />} />
+        <Route path="/request-demo" element={<RequestDemoPage />} />
+        <Route path="/invite/accept/:token" element={<AcceptInvitePage />} />
         {renderRoleRoutes('super-admin')}
         {renderRoleRoutes('school-admin')}
         {renderRoleRoutes('principal')}
@@ -2391,6 +3490,7 @@ function AppFrame() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <AppFooterAudit />
+      <Sonner position="top-right" richColors />
     </DemoAppProvider>
   );
 }

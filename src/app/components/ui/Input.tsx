@@ -14,17 +14,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            'flex h-10 w-full rounded-lg border border-input bg-input-background px-3 py-2 text-sm',
+            'flex h-12 w-full rounded-[18px] border-[2px] border-input bg-input-background px-4 py-3 text-sm font-medium shadow-[4px_4px_0_0_var(--color-border)]',
             'placeholder:text-muted-foreground',
-            'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
+            'focus:outline-none focus:ring-4 focus:ring-warning/30',
             'disabled:cursor-not-allowed disabled:opacity-50',
-            error && 'border-destructive focus:ring-destructive',
+            error && 'border-destructive focus:ring-destructive/25',
             className
           )}
           ref={ref}
           {...props}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
       </div>
     );
   }

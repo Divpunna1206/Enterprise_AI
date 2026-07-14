@@ -3,10 +3,10 @@ import { cn } from '../../lib/utils';
 
 const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="w-full overflow-auto">
+    <div className="w-full overflow-auto rounded-[24px] border-[3px] border-border bg-card shadow-[8px_8px_0_0_var(--color-border)]">
       <table
         ref={ref}
-        className={cn('w-full caption-bottom text-sm', className)}
+        className={cn('w-full min-w-[640px] caption-bottom text-sm', className)}
         {...props}
       />
     </div>
@@ -16,7 +16,7 @@ Table.displayName = 'Table';
 
 const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <thead ref={ref} className={cn('border-b bg-muted/50', className)} {...props} />
+    <thead ref={ref} className={cn('border-b-[3px] border-border bg-warning/85', className)} {...props} />
   )
 );
 TableHeader.displayName = 'TableHeader';
@@ -33,7 +33,7 @@ const TableRow = forwardRef<HTMLTableRowElement, HTMLAttributes<HTMLTableRowElem
     <tr
       ref={ref}
       className={cn(
-        'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+        'border-b-2 border-border transition-colors hover:bg-muted/70 data-[state=selected]:bg-muted',
         className
       )}
       {...props}
@@ -47,7 +47,7 @@ const TableHead = forwardRef<HTMLTableCellElement, HTMLAttributes<HTMLTableCellE
     <th
       ref={ref}
       className={cn(
-        'h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
+        'h-14 px-4 text-left align-middle text-xs font-black uppercase tracking-[0.18em] text-foreground [&:has([role=checkbox])]:pr-0',
         className
       )}
       {...props}
@@ -60,7 +60,7 @@ const TableCell = forwardRef<HTMLTableCellElement, HTMLAttributes<HTMLTableCellE
   ({ className, ...props }, ref) => (
     <td
       ref={ref}
-      className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)}
+      className={cn('p-4 align-middle font-medium [&:has([role=checkbox])]:pr-0', className)}
       {...props}
     />
   )

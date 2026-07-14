@@ -49,6 +49,7 @@ export interface DetailCard {
 export interface ActionItem {
   label: string;
   description: string;
+  path?: string;
 }
 
 export interface ChartDatum {
@@ -2149,5 +2150,7 @@ export const fullRouteList = [
   '/login',
   '/otp',
   '/role-detection',
+  '/request-demo',
+  '/invite/accept/:token',
   ...allScreens.map((screen) => screen.path),
 ];
